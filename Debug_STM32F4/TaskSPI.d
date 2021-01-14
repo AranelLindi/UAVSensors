@@ -1,4 +1,4 @@
-Task.d: ../Task.cpp \
+TaskSPI.d: ../TaskSPI.cpp \
  /home/rodos/Discovery_WorkSpace_Updated/rodos/api/rodos.h \
  /home/rodos/Discovery_WorkSpace_Updated/rodos/api/rodos-apis.h \
  /home/rodos/Discovery_WorkSpace_Updated/rodos/src/bare-metal-generic/hw_predefines.h \

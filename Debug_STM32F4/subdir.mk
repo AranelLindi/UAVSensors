@@ -4,13 +4,13 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../Task.cpp 
+../TaskSPI.cpp 
 
 OBJS += \
-./Task.o 
+./TaskSPI.o 
 
 CPP_DEPS += \
-./Task.d 
+./TaskSPI.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
