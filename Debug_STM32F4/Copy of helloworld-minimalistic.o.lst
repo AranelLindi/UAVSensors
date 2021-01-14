@@ -1,0 +1,439 @@
+   1              		.syntax unified
+   2              		.cpu cortex-m4
+   3              		.eabi_attribute 27, 3
+   4              		.fpu fpv4-sp-d16
+   5              		.eabi_attribute 20, 1
+   6              		.eabi_attribute 21, 1
+   7              		.eabi_attribute 23, 3
+   8              		.eabi_attribute 24, 1
+   9              		.eabi_attribute 25, 1
+  10              		.eabi_attribute 26, 1
+  11              		.eabi_attribute 30, 6
+  12              		.eabi_attribute 34, 1
+  13              		.eabi_attribute 18, 4
+  14              		.thumb
+  15              		.file	"Copy of helloworld-minimalistic.cpp"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.section	.text._ZN10HelloWorld4initEv,"axG",%progbits,_ZN10HelloWorld4initEv,comdat
+  20              		.align	2
+  21              		.weak	_ZN10HelloWorld4initEv
+  22              		.thumb
+  23              		.thumb_func
+  25              	_ZN10HelloWorld4initEv:
+  26              	.LFB185:
+  27              		.file 1 "../Copy of helloworld-minimalistic.cpp"
+   1:../Copy of helloworld-minimalistic.cpp **** #include "rodos.h"
+   2:../Copy of helloworld-minimalistic.cpp **** 
+   3:../Copy of helloworld-minimalistic.cpp **** 
+   4:../Copy of helloworld-minimalistic.cpp **** 
+   5:../Copy of helloworld-minimalistic.cpp **** 
+   6:../Copy of helloworld-minimalistic.cpp **** class HelloWorld : public Thread {
+   7:../Copy of helloworld-minimalistic.cpp **** 
+   8:../Copy of helloworld-minimalistic.cpp **** public:
+   9:../Copy of helloworld-minimalistic.cpp **** 	 int counter=0;
+  10:../Copy of helloworld-minimalistic.cpp **** 	  void init(){
+  28              		.loc 1 10 0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 8
+  31              		@ frame_needed = 1, uses_anonymous_args = 0
+  32              		@ link register save eliminated.
+  33 0000 80B4     		push	{r7}
+  34              	.LCFI0:
+  35              		.cfi_def_cfa_offset 4
+  36              		.cfi_offset 7, -4
+  37 0002 83B0     		sub	sp, sp, #12
+  38              	.LCFI1:
+  39              		.cfi_def_cfa_offset 16
+  40 0004 00AF     		add	r7, sp, #0
+  41              	.LCFI2:
+  42              		.cfi_def_cfa_register 7
+  43 0006 7860     		str	r0, [r7, #4]
+  11:../Copy of helloworld-minimalistic.cpp **** 
+  12:../Copy of helloworld-minimalistic.cpp **** 
+  13:../Copy of helloworld-minimalistic.cpp **** 
+  14:../Copy of helloworld-minimalistic.cpp **** 
+  15:../Copy of helloworld-minimalistic.cpp **** 	  }
+  44              		.loc 1 15 0
+  45 0008 07F10C07 		add	r7, r7, #12
+  46 000c BD46     		mov	sp, r7
+  47 000e 80BC     		pop	{r7}
+  48 0010 7047     		bx	lr
+  49              		.cfi_endproc
+  50              	.LFE185:
+  52 0012 00BF     		.section	.rodata
+  53              		.align	2
+  54              	.LC0:
+  55 0000 48656C6C 		.ascii	"Hello World Faisal November 2020 with counter %d!\012"
+  55      6F20576F 
+  55      726C6420 
+  55      46616973 
+  55      616C204E 
+  56 0032 00       		.ascii	"\000"
+  57              		.section	.text._ZN10HelloWorld3runEv,"axG",%progbits,_ZN10HelloWorld3runEv,comdat
+  58              		.align	2
+  59              		.weak	_ZN10HelloWorld3runEv
+  60              		.thumb
+  61              		.thumb_func
+  63              	_ZN10HelloWorld3runEv:
+  64              	.LFB186:
+  16:../Copy of helloworld-minimalistic.cpp ****   void run(){
+  65              		.loc 1 16 0
+  66              		.cfi_startproc
+  67              		@ args = 0, pretend = 0, frame = 8
+  68              		@ frame_needed = 1, uses_anonymous_args = 0
+  69 0000 80B5     		push	{r7, lr}
+  70              	.LCFI3:
+  71              		.cfi_def_cfa_offset 8
+  72              		.cfi_offset 7, -8
+  73              		.cfi_offset 14, -4
+  74 0002 82B0     		sub	sp, sp, #8
+  75              	.LCFI4:
+  76              		.cfi_def_cfa_offset 16
+  77 0004 00AF     		add	r7, sp, #0
+  78              	.LCFI5:
+  79              		.cfi_def_cfa_register 7
+  80 0006 7860     		str	r0, [r7, #4]
+  81              	.L3:
+  17:../Copy of helloworld-minimalistic.cpp **** 	  while(1)
+  18:../Copy of helloworld-minimalistic.cpp **** 	  PRINTF("Hello World Faisal November 2020 with counter %d!\n",counter++); }
+  82              		.loc 1 18 0 discriminator 1
+  83 0008 7B68     		ldr	r3, [r7, #4]
+  84 000a 1B6D     		ldr	r3, [r3, #80]
+  85 000c 1A46     		mov	r2, r3
+  86 000e 03F10101 		add	r1, r3, #1
+  87 0012 7B68     		ldr	r3, [r7, #4]
+  88 0014 1965     		str	r1, [r3, #80]
+  89 0016 40F20000 		movw	r0, #:lower16:.LC0
+  90 001a C0F20000 		movt	r0, #:upper16:.LC0
+  91 001e 1146     		mov	r1, r2
+  92 0020 FFF7FEFF 		bl	_ZN5RODOS6PRINTFEPKcz
+  17:../Copy of helloworld-minimalistic.cpp **** 	  while(1)
+  93              		.loc 1 17 0 discriminator 1
+  94 0024 F0E7     		b	.L3
+  95              		.cfi_endproc
+  96              	.LFE186:
+  98 0026 00BF     		.section	.rodata
+  99 0033 00       		.align	2
+ 100              	.LC1:
+ 101 0034 416E6F6E 		.ascii	"AnonymThread\000"
+ 101      796D5468 
+ 101      72656164 
+ 101      00
+ 102 0041 000000   		.section	.text._ZN10HelloWorldC2Ev,"axG",%progbits,_ZN10HelloWorldC5Ev,comdat
+ 103              		.align	2
+ 104              		.weak	_ZN10HelloWorldC2Ev
+ 105              		.thumb
+ 106              		.thumb_func
+ 108              	_ZN10HelloWorldC2Ev:
+ 109              	.LFB188:
+   6:../Copy of helloworld-minimalistic.cpp **** class HelloWorld : public Thread {
+ 110              		.loc 1 6 0
+ 111              		.cfi_startproc
+ 112              		@ args = 0, pretend = 0, frame = 8
+ 113              		@ frame_needed = 1, uses_anonymous_args = 0
+ 114 0000 80B5     		push	{r7, lr}
+ 115              	.LCFI6:
+ 116              		.cfi_def_cfa_offset 8
+ 117              		.cfi_offset 7, -8
+ 118              		.cfi_offset 14, -4
+ 119 0002 82B0     		sub	sp, sp, #8
+ 120              	.LCFI7:
+ 121              		.cfi_def_cfa_offset 16
+ 122 0004 00AF     		add	r7, sp, #0
+ 123              	.LCFI8:
+ 124              		.cfi_def_cfa_register 7
+ 125 0006 7860     		str	r0, [r7, #4]
+ 126              	.LBB2:
+   6:../Copy of helloworld-minimalistic.cpp **** class HelloWorld : public Thread {
+ 127              		.loc 1 6 0
+ 128 0008 7B68     		ldr	r3, [r7, #4]
+ 129 000a 1846     		mov	r0, r3
+ 130 000c 40F20001 		movw	r1, #:lower16:.LC1
+ 131 0010 C0F20001 		movt	r1, #:upper16:.LC1
+ 132 0014 4FF06402 		mov	r2, #100
+ 133 0018 4FF4FA63 		mov	r3, #2000
+ 134 001c FFF7FEFF 		bl	_ZN5RODOS6ThreadC2EPKcll
+ 135 0020 7B68     		ldr	r3, [r7, #4]
+ 136 0022 064A     		ldr	r2, .L7
+ 137 0024 1A60     		str	r2, [r3, #0]
+ 138 0026 7B68     		ldr	r3, [r7, #4]
+ 139 0028 4FF00002 		mov	r2, #0
+ 140 002c 1A65     		str	r2, [r3, #80]
+ 141              	.LBE2:
+ 142 002e 7B68     		ldr	r3, [r7, #4]
+ 143 0030 1846     		mov	r0, r3
+ 144 0032 07F10807 		add	r7, r7, #8
+ 145 0036 BD46     		mov	sp, r7
+ 146 0038 80BD     		pop	{r7, pc}
+ 147              	.L8:
+ 148 003a 00BF     		.align	2
+ 149              	.L7:
+ 150 003c 08000000 		.word	_ZTV10HelloWorld+8
+ 151              		.cfi_endproc
+ 152              	.LFE188:
+ 154              		.weak	_ZN10HelloWorldC1Ev
+ 155              		.thumb_set _ZN10HelloWorldC1Ev,_ZN10HelloWorldC2Ev
+ 156              		.global	helloworlds
+ 157              		.section	.bss.helloworlds,"aw",%nobits
+ 158              		.align	3
+ 161              	helloworlds:
+ 162 0000 00000000 		.space	88
+ 162      00000000 
+ 162      00000000 
+ 162      00000000 
+ 162      00000000 
+ 163              		.weak	_ZTV10HelloWorld
+ 164              		.section	.rodata._ZTV10HelloWorld,"aG",%progbits,_ZTV10HelloWorld,comdat
+ 165              		.align	3
+ 168              	_ZTV10HelloWorld:
+ 169 0000 00000000 		.word	0
+ 170 0004 00000000 		.word	0
+ 171 0008 00000000 		.word	_ZN10HelloWorldD1Ev
+ 172 000c 00000000 		.word	_ZN10HelloWorldD0Ev
+ 173 0010 00000000 		.word	_ZN10HelloWorld3runEv
+ 174 0014 00000000 		.word	_ZN10HelloWorld4initEv
+ 175              		.section	.text._ZN10HelloWorldD2Ev,"axG",%progbits,_ZN10HelloWorldD5Ev,comdat
+ 176              		.align	2
+ 177              		.weak	_ZN10HelloWorldD2Ev
+ 178              		.thumb
+ 179              		.thumb_func
+ 181              	_ZN10HelloWorldD2Ev:
+ 182              	.LFB195:
+   6:../Copy of helloworld-minimalistic.cpp **** class HelloWorld : public Thread {
+ 183              		.loc 1 6 0
+ 184              		.cfi_startproc
+ 185              		@ args = 0, pretend = 0, frame = 8
+ 186              		@ frame_needed = 1, uses_anonymous_args = 0
+ 187 0000 80B5     		push	{r7, lr}
+ 188              	.LCFI9:
+ 189              		.cfi_def_cfa_offset 8
+ 190              		.cfi_offset 7, -8
+ 191              		.cfi_offset 14, -4
+ 192 0002 82B0     		sub	sp, sp, #8
+ 193              	.LCFI10:
+ 194              		.cfi_def_cfa_offset 16
+ 195 0004 00AF     		add	r7, sp, #0
+ 196              	.LCFI11:
+ 197              		.cfi_def_cfa_register 7
+ 198 0006 7860     		str	r0, [r7, #4]
+ 199              	.LBB3:
+   6:../Copy of helloworld-minimalistic.cpp **** class HelloWorld : public Thread {
+ 200              		.loc 1 6 0
+ 201 0008 7B68     		ldr	r3, [r7, #4]
+ 202 000a 0A4A     		ldr	r2, .L13
+ 203 000c 1A60     		str	r2, [r3, #0]
+ 204 000e 7B68     		ldr	r3, [r7, #4]
+ 205 0010 1846     		mov	r0, r3
+ 206 0012 FFF7FEFF 		bl	_ZN5RODOS6ThreadD2Ev
+ 207              	.LBE3:
+ 208 0016 4FF00003 		mov	r3, #0
+ 209 001a 03F00103 		and	r3, r3, #1
+ 210 001e 002B     		cmp	r3, #0
+ 211 0020 02D0     		beq	.L11
+   6:../Copy of helloworld-minimalistic.cpp **** class HelloWorld : public Thread {
+ 212              		.loc 1 6 0 is_stmt 0 discriminator 2
+ 213 0022 7868     		ldr	r0, [r7, #4]
+ 214 0024 FFF7FEFF 		bl	_ZdlPv
+ 215              	.L11:
+   6:../Copy of helloworld-minimalistic.cpp **** class HelloWorld : public Thread {
+ 216              		.loc 1 6 0 discriminator 3
+ 217 0028 7B68     		ldr	r3, [r7, #4]
+ 218 002a 1846     		mov	r0, r3
+ 219 002c 07F10807 		add	r7, r7, #8
+ 220 0030 BD46     		mov	sp, r7
+ 221 0032 80BD     		pop	{r7, pc}
+ 222              	.L14:
+ 223              		.align	2
+ 224              	.L13:
+ 225 0034 08000000 		.word	_ZTV10HelloWorld+8
+ 226              		.cfi_endproc
+ 227              	.LFE195:
+ 229              		.weak	_ZN10HelloWorldD1Ev
+ 230              		.thumb_set _ZN10HelloWorldD1Ev,_ZN10HelloWorldD2Ev
+ 231              		.section	.text._ZN10HelloWorldD0Ev,"axG",%progbits,_ZN10HelloWorldD0Ev,comdat
+ 232              		.align	2
+ 233              		.weak	_ZN10HelloWorldD0Ev
+ 234              		.thumb
+ 235              		.thumb_func
+ 237              	_ZN10HelloWorldD0Ev:
+ 238              	.LFB197:
+   6:../Copy of helloworld-minimalistic.cpp **** class HelloWorld : public Thread {
+ 239              		.loc 1 6 0 is_stmt 1
+ 240              		.cfi_startproc
+ 241              		@ args = 0, pretend = 0, frame = 8
+ 242              		@ frame_needed = 1, uses_anonymous_args = 0
+ 243 0000 80B5     		push	{r7, lr}
+ 244              	.LCFI12:
+ 245              		.cfi_def_cfa_offset 8
+ 246              		.cfi_offset 7, -8
+ 247              		.cfi_offset 14, -4
+ 248 0002 82B0     		sub	sp, sp, #8
+ 249              	.LCFI13:
+ 250              		.cfi_def_cfa_offset 16
+ 251 0004 00AF     		add	r7, sp, #0
+ 252              	.LCFI14:
+ 253              		.cfi_def_cfa_register 7
+ 254 0006 7860     		str	r0, [r7, #4]
+   6:../Copy of helloworld-minimalistic.cpp **** class HelloWorld : public Thread {
+ 255              		.loc 1 6 0
+ 256 0008 7868     		ldr	r0, [r7, #4]
+ 257 000a FFF7FEFF 		bl	_ZN10HelloWorldD1Ev
+ 258 000e 7868     		ldr	r0, [r7, #4]
+ 259 0010 FFF7FEFF 		bl	_ZdlPv
+ 260 0014 7B68     		ldr	r3, [r7, #4]
+ 261 0016 1846     		mov	r0, r3
+ 262 0018 07F10807 		add	r7, r7, #8
+ 263 001c BD46     		mov	sp, r7
+ 264 001e 80BD     		pop	{r7, pc}
+ 265              		.cfi_endproc
+ 266              	.LFE197:
+ 268              		.section	.text._Z41__static_initialization_and_destruction_0ii,"ax",%progbits
+ 269              		.align	2
+ 270              		.thumb
+ 271              		.thumb_func
+ 273              	_Z41__static_initialization_and_destruction_0ii:
+ 274              	.LFB202:
+  19:../Copy of helloworld-minimalistic.cpp **** } helloworlds;
+ 275              		.loc 1 19 0
+ 276              		.cfi_startproc
+ 277              		@ args = 0, pretend = 0, frame = 8
+ 278              		@ frame_needed = 1, uses_anonymous_args = 0
+ 279 0000 80B5     		push	{r7, lr}
+ 280              	.LCFI15:
+ 281              		.cfi_def_cfa_offset 8
+ 282              		.cfi_offset 7, -8
+ 283              		.cfi_offset 14, -4
+ 284 0002 82B0     		sub	sp, sp, #8
+ 285              	.LCFI16:
+ 286              		.cfi_def_cfa_offset 16
+ 287 0004 00AF     		add	r7, sp, #0
+ 288              	.LCFI17:
+ 289              		.cfi_def_cfa_register 7
+ 290 0006 7860     		str	r0, [r7, #4]
+ 291 0008 3960     		str	r1, [r7, #0]
+ 292              		.loc 1 19 0
+ 293 000a 7B68     		ldr	r3, [r7, #4]
+ 294 000c 012B     		cmp	r3, #1
+ 295 000e 18D1     		bne	.L18
+ 296              		.loc 1 19 0 is_stmt 0 discriminator 1
+ 297 0010 3A68     		ldr	r2, [r7, #0]
+ 298 0012 4FF6FF73 		movw	r3, #65535
+ 299 0016 9A42     		cmp	r2, r3
+ 300 0018 13D1     		bne	.L18
+ 301              		.loc 1 19 0 discriminator 3
+ 302 001a 40F20000 		movw	r0, #:lower16:helloworlds
+ 303 001e C0F20000 		movt	r0, #:upper16:helloworlds
+ 304 0022 FFF7FEFF 		bl	_ZN10HelloWorldC1Ev
+ 305 0026 40F20000 		movw	r0, #:lower16:helloworlds
+ 306 002a C0F20000 		movt	r0, #:upper16:helloworlds
+ 307 002e 40F20001 		movw	r1, #:lower16:_ZN10HelloWorldD1Ev
+ 308 0032 C0F20001 		movt	r1, #:upper16:_ZN10HelloWorldD1Ev
+ 309 0036 40F20002 		movw	r2, #:lower16:__dso_handle
+ 310 003a C0F20002 		movt	r2, #:upper16:__dso_handle
+ 311 003e FFF7FEFF 		bl	__aeabi_atexit
+ 312              	.L18:
+ 313              		.loc 1 19 0
+ 314 0042 07F10807 		add	r7, r7, #8
+ 315 0046 BD46     		mov	sp, r7
+ 316 0048 80BD     		pop	{r7, pc}
+ 317              		.cfi_endproc
+ 318              	.LFE202:
+ 320 004a 00BF     		.section	.text._GLOBAL__sub_I_helloworlds,"ax",%progbits
+ 321              		.align	2
+ 322              		.thumb
+ 323              		.thumb_func
+ 325              	_GLOBAL__sub_I_helloworlds:
+ 326              	.LFB210:
+ 327              		.loc 1 19 0 is_stmt 1
+ 328              		.cfi_startproc
+ 329              		@ args = 0, pretend = 0, frame = 0
+ 330              		@ frame_needed = 1, uses_anonymous_args = 0
+ 331 0000 80B5     		push	{r7, lr}
+ 332              	.LCFI18:
+ 333              		.cfi_def_cfa_offset 8
+ 334              		.cfi_offset 7, -8
+ 335              		.cfi_offset 14, -4
+ 336 0002 00AF     		add	r7, sp, #0
+ 337              	.LCFI19:
+ 338              		.cfi_def_cfa_register 7
+ 339              		.loc 1 19 0
+ 340 0004 4FF00100 		mov	r0, #1
+ 341 0008 4FF6FF71 		movw	r1, #65535
+ 342 000c FFF7FEFF 		bl	_Z41__static_initialization_and_destruction_0ii
+ 343 0010 80BD     		pop	{r7, pc}
+ 344              		.cfi_endproc
+ 345              	.LFE210:
+ 347 0012 00BF     		.section	.init_array,"aw",%init_array
+ 348              		.align	2
+ 349 0000 00000000 		.word	_GLOBAL__sub_I_helloworlds(target1)
+ 350              		.text
+ 351              	.Letext0:
+ 352              		.file 2 "/home/rodos/Discovery_WorkSpace_Updated/rodos/api/string_pico.h"
+ 353              		.file 3 "/home/rodos/Discovery_WorkSpace_Updated/rodos/api/rodos.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 Copy of helloworld-minimalistic.cpp
+     /tmp/ccAh44RF.s:20     .text._ZN10HelloWorld4initEv:00000000 $t
+     /tmp/ccAh44RF.s:25     .text._ZN10HelloWorld4initEv:00000000 _ZN10HelloWorld4initEv
+     /tmp/ccAh44RF.s:53     .rodata:00000000 $d
+     /tmp/ccAh44RF.s:54     .rodata:00000000 .LC0
+     /tmp/ccAh44RF.s:58     .text._ZN10HelloWorld3runEv:00000000 $t
+     /tmp/ccAh44RF.s:63     .text._ZN10HelloWorld3runEv:00000000 _ZN10HelloWorld3runEv
+     /tmp/ccAh44RF.s:100    .rodata:00000034 .LC1
+     /tmp/ccAh44RF.s:103    .text._ZN10HelloWorldC2Ev:00000000 $t
+     /tmp/ccAh44RF.s:108    .text._ZN10HelloWorldC2Ev:00000000 _ZN10HelloWorldC2Ev
+     /tmp/ccAh44RF.s:150    .text._ZN10HelloWorldC2Ev:0000003c $d
+     /tmp/ccAh44RF.s:168    .rodata._ZTV10HelloWorld:00000000 _ZTV10HelloWorld
+     /tmp/ccAh44RF.s:108    .text._ZN10HelloWorldC2Ev:00000000 _ZN10HelloWorldC1Ev
+     /tmp/ccAh44RF.s:161    .bss.helloworlds:00000000 helloworlds
+     /tmp/ccAh44RF.s:158    .bss.helloworlds:00000000 $d
+     /tmp/ccAh44RF.s:165    .rodata._ZTV10HelloWorld:00000000 $d
+     /tmp/ccAh44RF.s:181    .text._ZN10HelloWorldD2Ev:00000000 _ZN10HelloWorldD1Ev
+     /tmp/ccAh44RF.s:237    .text._ZN10HelloWorldD0Ev:00000000 _ZN10HelloWorldD0Ev
+     /tmp/ccAh44RF.s:176    .text._ZN10HelloWorldD2Ev:00000000 $t
+     /tmp/ccAh44RF.s:181    .text._ZN10HelloWorldD2Ev:00000000 _ZN10HelloWorldD2Ev
+     /tmp/ccAh44RF.s:225    .text._ZN10HelloWorldD2Ev:00000034 $d
+     /tmp/ccAh44RF.s:232    .text._ZN10HelloWorldD0Ev:00000000 $t
+     /tmp/ccAh44RF.s:269    .text._Z41__static_initialization_and_destruction_0ii:00000000 $t
+     /tmp/ccAh44RF.s:273    .text._Z41__static_initialization_and_destruction_0ii:00000000 _Z41__static_initialization_and_destruction_0ii
+     /tmp/ccAh44RF.s:321    .text._GLOBAL__sub_I_helloworlds:00000000 $t
+     /tmp/ccAh44RF.s:325    .text._GLOBAL__sub_I_helloworlds:00000000 _GLOBAL__sub_I_helloworlds
+     /tmp/ccAh44RF.s:348    .init_array:00000000 $d
+                     .debug_frame:00000010 $d
+                           .group:00000000 _ZN10HelloWorldC5Ev
+                           .group:00000000 _ZN10HelloWorldD5Ev
+                           .group:00000000 wm4.1.4bcac17c4792917b2ba5e2a4796f5f5e
+                           .group:00000000 wm4.rodosapis.h.15.0e6831dceea37efa2bc1353c1d21da83
+                           .group:00000000 wm4.newlib.h.8.a9901dc52d1357e3e94003403d43f8b5
+                           .group:00000000 wm4.features.h.22.b72b3baab2bb2eab3661375590100b6b
+                           .group:00000000 wm4.config.h.193.5fb8ef056cdff92dec3dee9552839d8c
+                           .group:00000000 wm4._ansi.h.23.fff5fb436fa813a3c343750c1b5c0dee
+                           .group:00000000 wm4.stdint.h.20.54ad762faa59e3c05491630641c8d8bf
+                           .group:00000000 wm4.stddef.h.40.d401a05faad284016f61f130946a7dc0
+                           .group:00000000 wm4.debug.h.60.5e4d396daa73eb89d4dd5cb7785a4940
+                           .group:00000000 wm4.userconfig.h.15.4b779a6c48326c33ab80165d996a01d6
+                           .group:00000000 wm4.params.h.25.6786f6296fc5041e7e2622766914213c
+                           .group:00000000 wm4.hw_thread_defs.h.49.33c5a370dbbf870dc88c401bd6f04ef9
+                           .group:00000000 wm4.timemodel.h.69.fd37f23e589aac5d4e48c94135c9fb54
+                           .group:00000000 wm4.reserved_application_ids.h.3.a7d344bdbd76719670cac32f25715090
+                           .group:00000000 wm4.thread.h.52.3da6386f3345241419d8fed3fc2b4984
+                           .group:00000000 wm4.semaphore.h.50.f264a5bb73af55571809fd59fef0eaec
+                           .group:00000000 wm4.reserved_topic_ids.h.3.ee638471f5024ddaa9a33c286bbffbf9
+                           .group:00000000 wm4._default_types.h.6.5e12cd604db8ce00b62bb2f02708eaf3
+                           .group:00000000 wm4.lock.h.2.9bc98482741e5e2a9450b12934a684ea
+                           .group:00000000 wm4.stddef.h.161.295bec9bd195070211f2a910b7059fa9
+                           .group:00000000 wm4.types.h.2.e9cec8c90ab35f77d9f499e06ae02400
+                           .group:00000000 wm4.types.h.80.1f2c84c0d57dd52dd9936095d9ac218e
+                           .group:00000000 wm4.stdarg.h.31.b70f21342353634f7b44d85f85f13832
+                           .group:00000000 wm4.linkinterfaceuart.h.64.049492809827f6ca46297efb16c6ce0d
+                           .group:00000000 wm4.linkinterfacecan.h.19.60f979542a316508947b99ad5ed5929e
+                           .group:00000000 wm4.linkinterfaceshm.h.8.41949ad249c2315ff5f19839d8e856e0
+
+UNDEFINED SYMBOLS
+_ZN5RODOS6PRINTFEPKcz
+_ZN5RODOS6ThreadC2EPKcll
+_ZN5RODOS6ThreadD2Ev
+_ZdlPv
+__dso_handle
+__aeabi_atexit

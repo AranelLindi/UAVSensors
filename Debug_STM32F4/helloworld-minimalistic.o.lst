@@ -1,0 +1,51 @@
+   1              		.syntax unified
+   2              		.cpu cortex-m4
+   3              		.eabi_attribute 27, 3
+   4              		.fpu fpv4-sp-d16
+   5              		.eabi_attribute 20, 1
+   6              		.eabi_attribute 21, 1
+   7              		.eabi_attribute 23, 3
+   8              		.eabi_attribute 24, 1
+   9              		.eabi_attribute 25, 1
+  10              		.eabi_attribute 26, 1
+  11              		.eabi_attribute 30, 6
+  12              		.eabi_attribute 34, 1
+  13              		.eabi_attribute 18, 4
+  14              		.thumb
+  15              		.file	"helloworld-minimalistic.cpp"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              	.Letext0:
+  20              		.file 1 "/home/rodos/Discovery_WorkSpace_Updated/rodos/api/string_pico.h"
+  21              		.file 2 "/home/rodos/Discovery_WorkSpace_Updated/rodos/api/rodos.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 helloworld-minimalistic.cpp
+                           .group:00000000 wm4.1.4bcac17c4792917b2ba5e2a4796f5f5e
+                           .group:00000000 wm4.rodosapis.h.15.0e6831dceea37efa2bc1353c1d21da83
+                           .group:00000000 wm4.newlib.h.8.a9901dc52d1357e3e94003403d43f8b5
+                           .group:00000000 wm4.features.h.22.b72b3baab2bb2eab3661375590100b6b
+                           .group:00000000 wm4.config.h.193.5fb8ef056cdff92dec3dee9552839d8c
+                           .group:00000000 wm4._ansi.h.23.fff5fb436fa813a3c343750c1b5c0dee
+                           .group:00000000 wm4.stdint.h.20.54ad762faa59e3c05491630641c8d8bf
+                           .group:00000000 wm4.stddef.h.40.d401a05faad284016f61f130946a7dc0
+                           .group:00000000 wm4.debug.h.60.5e4d396daa73eb89d4dd5cb7785a4940
+                           .group:00000000 wm4.userconfig.h.15.4b779a6c48326c33ab80165d996a01d6
+                           .group:00000000 wm4.params.h.25.6786f6296fc5041e7e2622766914213c
+                           .group:00000000 wm4.hw_thread_defs.h.49.33c5a370dbbf870dc88c401bd6f04ef9
+                           .group:00000000 wm4.timemodel.h.69.fd37f23e589aac5d4e48c94135c9fb54
+                           .group:00000000 wm4.reserved_application_ids.h.3.a7d344bdbd76719670cac32f25715090
+                           .group:00000000 wm4.thread.h.52.3da6386f3345241419d8fed3fc2b4984
+                           .group:00000000 wm4.semaphore.h.50.f264a5bb73af55571809fd59fef0eaec
+                           .group:00000000 wm4.reserved_topic_ids.h.3.ee638471f5024ddaa9a33c286bbffbf9
+                           .group:00000000 wm4._default_types.h.6.5e12cd604db8ce00b62bb2f02708eaf3
+                           .group:00000000 wm4.lock.h.2.9bc98482741e5e2a9450b12934a684ea
+                           .group:00000000 wm4.stddef.h.161.295bec9bd195070211f2a910b7059fa9
+                           .group:00000000 wm4.types.h.2.e9cec8c90ab35f77d9f499e06ae02400
+                           .group:00000000 wm4.types.h.80.1f2c84c0d57dd52dd9936095d9ac218e
+                           .group:00000000 wm4.stdarg.h.31.b70f21342353634f7b44d85f85f13832
+                           .group:00000000 wm4.linkinterfaceuart.h.64.049492809827f6ca46297efb16c6ce0d
+                           .group:00000000 wm4.linkinterfacecan.h.19.60f979542a316508947b99ad5ed5929e
+                           .group:00000000 wm4.linkinterfaceshm.h.8.41949ad249c2315ff5f19839d8e856e0
+
+NO UNDEFINED SYMBOLS

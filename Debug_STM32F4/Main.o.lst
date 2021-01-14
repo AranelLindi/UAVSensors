@@ -1,0 +1,429 @@
+   1              		.syntax unified
+   2              		.cpu cortex-m4
+   3              		.eabi_attribute 27, 3
+   4              		.fpu fpv4-sp-d16
+   5              		.eabi_attribute 20, 1
+   6              		.eabi_attribute 21, 1
+   7              		.eabi_attribute 23, 3
+   8              		.eabi_attribute 24, 1
+   9              		.eabi_attribute 25, 1
+  10              		.eabi_attribute 26, 1
+  11              		.eabi_attribute 30, 6
+  12              		.eabi_attribute 34, 1
+  13              		.eabi_attribute 18, 4
+  14              		.thumb
+  15              		.file	"Main.cpp"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.section	.text._ZN4test4initEv,"axG",%progbits,_ZN4test4initEv,comdat
+  20              		.align	2
+  21              		.weak	_ZN4test4initEv
+  22              		.thumb
+  23              		.thumb_func
+  25              	_ZN4test4initEv:
+  26              	.LFB185:
+  27              		.file 1 "../Main.cpp"
+   1:../Main.cpp   **** /*
+   2:../Main.cpp   ****  * Main.cpp
+   3:../Main.cpp   ****  *
+   4:../Main.cpp   ****  *  Created on: Nov 25, 2020
+   5:../Main.cpp   ****  *      Author: rodos
+   6:../Main.cpp   ****  */
+   7:../Main.cpp   **** 
+   8:../Main.cpp   **** #include "rodos.h"
+   9:../Main.cpp   **** 
+  10:../Main.cpp   **** 
+  11:../Main.cpp   **** class test : public Thread {
+  12:../Main.cpp   **** public:
+  13:../Main.cpp   **** 	void init() {
+  28              		.loc 1 13 0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 8
+  31              		@ frame_needed = 1, uses_anonymous_args = 0
+  32              		@ link register save eliminated.
+  33 0000 80B4     		push	{r7}
+  34              	.LCFI0:
+  35              		.cfi_def_cfa_offset 4
+  36              		.cfi_offset 7, -4
+  37 0002 83B0     		sub	sp, sp, #12
+  38              	.LCFI1:
+  39              		.cfi_def_cfa_offset 16
+  40 0004 00AF     		add	r7, sp, #0
+  41              	.LCFI2:
+  42              		.cfi_def_cfa_register 7
+  43 0006 7860     		str	r0, [r7, #4]
+  14:../Main.cpp   **** 
+  15:../Main.cpp   **** 	}
+  44              		.loc 1 15 0
+  45 0008 07F10C07 		add	r7, r7, #12
+  46 000c BD46     		mov	sp, r7
+  47 000e 80BC     		pop	{r7}
+  48 0010 7047     		bx	lr
+  49              		.cfi_endproc
+  50              	.LFE185:
+  52 0012 00BF     		.section	.rodata
+  53              		.align	2
+  54              	.LC0:
+  55 0000 0A204845 		.ascii	"\012 HELLO WORLD \015\000"
+  55      4C4C4F20 
+  55      574F524C 
+  55      44200D00 
+  56              		.section	.text._ZN4test3runEv,"axG",%progbits,_ZN4test3runEv,comdat
+  57              		.align	2
+  58              		.weak	_ZN4test3runEv
+  59              		.thumb
+  60              		.thumb_func
+  62              	_ZN4test3runEv:
+  63              	.LFB186:
+  16:../Main.cpp   **** 
+  17:../Main.cpp   **** 	void run() {
+  64              		.loc 1 17 0
+  65              		.cfi_startproc
+  66              		@ args = 0, pretend = 0, frame = 8
+  67              		@ frame_needed = 1, uses_anonymous_args = 0
+  68 0000 80B5     		push	{r7, lr}
+  69              	.LCFI3:
+  70              		.cfi_def_cfa_offset 8
+  71              		.cfi_offset 7, -8
+  72              		.cfi_offset 14, -4
+  73 0002 82B0     		sub	sp, sp, #8
+  74              	.LCFI4:
+  75              		.cfi_def_cfa_offset 16
+  76 0004 00AF     		add	r7, sp, #0
+  77              	.LCFI5:
+  78              		.cfi_def_cfa_register 7
+  79 0006 7860     		str	r0, [r7, #4]
+  80              	.L3:
+  18:../Main.cpp   **** 		while (1)
+  19:../Main.cpp   **** 			PRINTF("\n HELLO WORLD \r");
+  81              		.loc 1 19 0 discriminator 1
+  82 0008 40F20000 		movw	r0, #:lower16:.LC0
+  83 000c C0F20000 		movt	r0, #:upper16:.LC0
+  84 0010 FFF7FEFF 		bl	_ZN5RODOS6PRINTFEPKcz
+  18:../Main.cpp   **** 		while (1)
+  85              		.loc 1 18 0 discriminator 1
+  86 0014 F8E7     		b	.L3
+  87              		.cfi_endproc
+  88              	.LFE186:
+  90 0016 00BF     		.section	.rodata
+  91              		.align	2
+  92              	.LC1:
+  93 0010 416E6F6E 		.ascii	"AnonymThread\000"
+  93      796D5468 
+  93      72656164 
+  93      00
+  94 001d 000000   		.section	.text._ZN4testC2Ev,"axG",%progbits,_ZN4testC5Ev,comdat
+  95              		.align	2
+  96              		.weak	_ZN4testC2Ev
+  97              		.thumb
+  98              		.thumb_func
+ 100              	_ZN4testC2Ev:
+ 101              	.LFB188:
+  11:../Main.cpp   **** class test : public Thread {
+ 102              		.loc 1 11 0
+ 103              		.cfi_startproc
+ 104              		@ args = 0, pretend = 0, frame = 8
+ 105              		@ frame_needed = 1, uses_anonymous_args = 0
+ 106 0000 80B5     		push	{r7, lr}
+ 107              	.LCFI6:
+ 108              		.cfi_def_cfa_offset 8
+ 109              		.cfi_offset 7, -8
+ 110              		.cfi_offset 14, -4
+ 111 0002 82B0     		sub	sp, sp, #8
+ 112              	.LCFI7:
+ 113              		.cfi_def_cfa_offset 16
+ 114 0004 00AF     		add	r7, sp, #0
+ 115              	.LCFI8:
+ 116              		.cfi_def_cfa_register 7
+ 117 0006 7860     		str	r0, [r7, #4]
+ 118              	.LBB2:
+  11:../Main.cpp   **** class test : public Thread {
+ 119              		.loc 1 11 0
+ 120 0008 7B68     		ldr	r3, [r7, #4]
+ 121 000a 1846     		mov	r0, r3
+ 122 000c 40F20001 		movw	r1, #:lower16:.LC1
+ 123 0010 C0F20001 		movt	r1, #:upper16:.LC1
+ 124 0014 4FF06402 		mov	r2, #100
+ 125 0018 4FF4FA63 		mov	r3, #2000
+ 126 001c FFF7FEFF 		bl	_ZN5RODOS6ThreadC2EPKcll
+ 127 0020 7B68     		ldr	r3, [r7, #4]
+ 128 0022 044A     		ldr	r2, .L7
+ 129 0024 1A60     		str	r2, [r3, #0]
+ 130              	.LBE2:
+ 131 0026 7B68     		ldr	r3, [r7, #4]
+ 132 0028 1846     		mov	r0, r3
+ 133 002a 07F10807 		add	r7, r7, #8
+ 134 002e BD46     		mov	sp, r7
+ 135 0030 80BD     		pop	{r7, pc}
+ 136              	.L8:
+ 137 0032 00BF     		.align	2
+ 138              	.L7:
+ 139 0034 08000000 		.word	_ZTV4test+8
+ 140              		.cfi_endproc
+ 141              	.LFE188:
+ 143              		.weak	_ZN4testC1Ev
+ 144              		.thumb_set _ZN4testC1Ev,_ZN4testC2Ev
+ 145              		.global	main
+ 146              		.section	.bss.main,"aw",%nobits
+ 147              		.align	3
+ 150              	main:
+ 151 0000 00000000 		.space	80
+ 151      00000000 
+ 151      00000000 
+ 151      00000000 
+ 151      00000000 
+ 152              		.weak	_ZTV4test
+ 153              		.section	.rodata._ZTV4test,"aG",%progbits,_ZTV4test,comdat
+ 154              		.align	3
+ 157              	_ZTV4test:
+ 158 0000 00000000 		.word	0
+ 159 0004 00000000 		.word	0
+ 160 0008 00000000 		.word	_ZN4testD1Ev
+ 161 000c 00000000 		.word	_ZN4testD0Ev
+ 162 0010 00000000 		.word	_ZN4test3runEv
+ 163 0014 00000000 		.word	_ZN4test4initEv
+ 164              		.section	.text._ZN4testD2Ev,"axG",%progbits,_ZN4testD5Ev,comdat
+ 165              		.align	2
+ 166              		.weak	_ZN4testD2Ev
+ 167              		.thumb
+ 168              		.thumb_func
+ 170              	_ZN4testD2Ev:
+ 171              	.LFB195:
+  11:../Main.cpp   **** class test : public Thread {
+ 172              		.loc 1 11 0
+ 173              		.cfi_startproc
+ 174              		@ args = 0, pretend = 0, frame = 8
+ 175              		@ frame_needed = 1, uses_anonymous_args = 0
+ 176 0000 80B5     		push	{r7, lr}
+ 177              	.LCFI9:
+ 178              		.cfi_def_cfa_offset 8
+ 179              		.cfi_offset 7, -8
+ 180              		.cfi_offset 14, -4
+ 181 0002 82B0     		sub	sp, sp, #8
+ 182              	.LCFI10:
+ 183              		.cfi_def_cfa_offset 16
+ 184 0004 00AF     		add	r7, sp, #0
+ 185              	.LCFI11:
+ 186              		.cfi_def_cfa_register 7
+ 187 0006 7860     		str	r0, [r7, #4]
+ 188              	.LBB3:
+  11:../Main.cpp   **** class test : public Thread {
+ 189              		.loc 1 11 0
+ 190 0008 7B68     		ldr	r3, [r7, #4]
+ 191 000a 0A4A     		ldr	r2, .L13
+ 192 000c 1A60     		str	r2, [r3, #0]
+ 193 000e 7B68     		ldr	r3, [r7, #4]
+ 194 0010 1846     		mov	r0, r3
+ 195 0012 FFF7FEFF 		bl	_ZN5RODOS6ThreadD2Ev
+ 196              	.LBE3:
+ 197 0016 4FF00003 		mov	r3, #0
+ 198 001a 03F00103 		and	r3, r3, #1
+ 199 001e 002B     		cmp	r3, #0
+ 200 0020 02D0     		beq	.L11
+  11:../Main.cpp   **** class test : public Thread {
+ 201              		.loc 1 11 0 is_stmt 0 discriminator 2
+ 202 0022 7868     		ldr	r0, [r7, #4]
+ 203 0024 FFF7FEFF 		bl	_ZdlPv
+ 204              	.L11:
+  11:../Main.cpp   **** class test : public Thread {
+ 205              		.loc 1 11 0 discriminator 3
+ 206 0028 7B68     		ldr	r3, [r7, #4]
+ 207 002a 1846     		mov	r0, r3
+ 208 002c 07F10807 		add	r7, r7, #8
+ 209 0030 BD46     		mov	sp, r7
+ 210 0032 80BD     		pop	{r7, pc}
+ 211              	.L14:
+ 212              		.align	2
+ 213              	.L13:
+ 214 0034 08000000 		.word	_ZTV4test+8
+ 215              		.cfi_endproc
+ 216              	.LFE195:
+ 218              		.weak	_ZN4testD1Ev
+ 219              		.thumb_set _ZN4testD1Ev,_ZN4testD2Ev
+ 220              		.section	.text._ZN4testD0Ev,"axG",%progbits,_ZN4testD0Ev,comdat
+ 221              		.align	2
+ 222              		.weak	_ZN4testD0Ev
+ 223              		.thumb
+ 224              		.thumb_func
+ 226              	_ZN4testD0Ev:
+ 227              	.LFB197:
+  11:../Main.cpp   **** class test : public Thread {
+ 228              		.loc 1 11 0 is_stmt 1
+ 229              		.cfi_startproc
+ 230              		@ args = 0, pretend = 0, frame = 8
+ 231              		@ frame_needed = 1, uses_anonymous_args = 0
+ 232 0000 80B5     		push	{r7, lr}
+ 233              	.LCFI12:
+ 234              		.cfi_def_cfa_offset 8
+ 235              		.cfi_offset 7, -8
+ 236              		.cfi_offset 14, -4
+ 237 0002 82B0     		sub	sp, sp, #8
+ 238              	.LCFI13:
+ 239              		.cfi_def_cfa_offset 16
+ 240 0004 00AF     		add	r7, sp, #0
+ 241              	.LCFI14:
+ 242              		.cfi_def_cfa_register 7
+ 243 0006 7860     		str	r0, [r7, #4]
+  11:../Main.cpp   **** class test : public Thread {
+ 244              		.loc 1 11 0
+ 245 0008 7868     		ldr	r0, [r7, #4]
+ 246 000a FFF7FEFF 		bl	_ZN4testD1Ev
+ 247 000e 7868     		ldr	r0, [r7, #4]
+ 248 0010 FFF7FEFF 		bl	_ZdlPv
+ 249 0014 7B68     		ldr	r3, [r7, #4]
+ 250 0016 1846     		mov	r0, r3
+ 251 0018 07F10807 		add	r7, r7, #8
+ 252 001c BD46     		mov	sp, r7
+ 253 001e 80BD     		pop	{r7, pc}
+ 254              		.cfi_endproc
+ 255              	.LFE197:
+ 257              		.section	.text._Z41__static_initialization_and_destruction_0ii,"ax",%progbits
+ 258              		.align	2
+ 259              		.thumb
+ 260              		.thumb_func
+ 262              	_Z41__static_initialization_and_destruction_0ii:
+ 263              	.LFB202:
+  20:../Main.cpp   **** 	}
+  21:../Main.cpp   **** } main;
+ 264              		.loc 1 21 0
+ 265              		.cfi_startproc
+ 266              		@ args = 0, pretend = 0, frame = 8
+ 267              		@ frame_needed = 1, uses_anonymous_args = 0
+ 268 0000 80B5     		push	{r7, lr}
+ 269              	.LCFI15:
+ 270              		.cfi_def_cfa_offset 8
+ 271              		.cfi_offset 7, -8
+ 272              		.cfi_offset 14, -4
+ 273 0002 82B0     		sub	sp, sp, #8
+ 274              	.LCFI16:
+ 275              		.cfi_def_cfa_offset 16
+ 276 0004 00AF     		add	r7, sp, #0
+ 277              	.LCFI17:
+ 278              		.cfi_def_cfa_register 7
+ 279 0006 7860     		str	r0, [r7, #4]
+ 280 0008 3960     		str	r1, [r7, #0]
+ 281              		.loc 1 21 0
+ 282 000a 7B68     		ldr	r3, [r7, #4]
+ 283 000c 012B     		cmp	r3, #1
+ 284 000e 18D1     		bne	.L18
+ 285              		.loc 1 21 0 is_stmt 0 discriminator 1
+ 286 0010 3A68     		ldr	r2, [r7, #0]
+ 287 0012 4FF6FF73 		movw	r3, #65535
+ 288 0016 9A42     		cmp	r2, r3
+ 289 0018 13D1     		bne	.L18
+ 290              		.loc 1 21 0 discriminator 3
+ 291 001a 40F20000 		movw	r0, #:lower16:main
+ 292 001e C0F20000 		movt	r0, #:upper16:main
+ 293 0022 FFF7FEFF 		bl	_ZN4testC1Ev
+ 294 0026 40F20000 		movw	r0, #:lower16:main
+ 295 002a C0F20000 		movt	r0, #:upper16:main
+ 296 002e 40F20001 		movw	r1, #:lower16:_ZN4testD1Ev
+ 297 0032 C0F20001 		movt	r1, #:upper16:_ZN4testD1Ev
+ 298 0036 40F20002 		movw	r2, #:lower16:__dso_handle
+ 299 003a C0F20002 		movt	r2, #:upper16:__dso_handle
+ 300 003e FFF7FEFF 		bl	__aeabi_atexit
+ 301              	.L18:
+ 302              		.loc 1 21 0
+ 303 0042 07F10807 		add	r7, r7, #8
+ 304 0046 BD46     		mov	sp, r7
+ 305 0048 80BD     		pop	{r7, pc}
+ 306              		.cfi_endproc
+ 307              	.LFE202:
+ 309 004a 00BF     		.section	.text._GLOBAL__sub_I_main,"ax",%progbits
+ 310              		.align	2
+ 311              		.thumb
+ 312              		.thumb_func
+ 314              	_GLOBAL__sub_I_main:
+ 315              	.LFB210:
+ 316              		.loc 1 21 0 is_stmt 1
+ 317              		.cfi_startproc
+ 318              		@ args = 0, pretend = 0, frame = 0
+ 319              		@ frame_needed = 1, uses_anonymous_args = 0
+ 320 0000 80B5     		push	{r7, lr}
+ 321              	.LCFI18:
+ 322              		.cfi_def_cfa_offset 8
+ 323              		.cfi_offset 7, -8
+ 324              		.cfi_offset 14, -4
+ 325 0002 00AF     		add	r7, sp, #0
+ 326              	.LCFI19:
+ 327              		.cfi_def_cfa_register 7
+ 328              		.loc 1 21 0
+ 329 0004 4FF00100 		mov	r0, #1
+ 330 0008 4FF6FF71 		movw	r1, #65535
+ 331 000c FFF7FEFF 		bl	_Z41__static_initialization_and_destruction_0ii
+ 332 0010 80BD     		pop	{r7, pc}
+ 333              		.cfi_endproc
+ 334              	.LFE210:
+ 336 0012 00BF     		.section	.init_array,"aw",%init_array
+ 337              		.align	2
+ 338 0000 00000000 		.word	_GLOBAL__sub_I_main(target1)
+ 339              		.text
+ 340              	.Letext0:
+ 341              		.file 2 "/home/rodos/Discovery_WorkSpace_Updated/rodos/api/string_pico.h"
+ 342              		.file 3 "/home/rodos/Discovery_WorkSpace_Updated/rodos/api/rodos.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 Main.cpp
+     /tmp/ccwpJX20.s:20     .text._ZN4test4initEv:00000000 $t
+     /tmp/ccwpJX20.s:25     .text._ZN4test4initEv:00000000 _ZN4test4initEv
+     /tmp/ccwpJX20.s:53     .rodata:00000000 $d
+     /tmp/ccwpJX20.s:54     .rodata:00000000 .LC0
+     /tmp/ccwpJX20.s:57     .text._ZN4test3runEv:00000000 $t
+     /tmp/ccwpJX20.s:62     .text._ZN4test3runEv:00000000 _ZN4test3runEv
+     /tmp/ccwpJX20.s:92     .rodata:00000010 .LC1
+     /tmp/ccwpJX20.s:95     .text._ZN4testC2Ev:00000000 $t
+     /tmp/ccwpJX20.s:100    .text._ZN4testC2Ev:00000000 _ZN4testC2Ev
+     /tmp/ccwpJX20.s:139    .text._ZN4testC2Ev:00000034 $d
+     /tmp/ccwpJX20.s:157    .rodata._ZTV4test:00000000 _ZTV4test
+     /tmp/ccwpJX20.s:100    .text._ZN4testC2Ev:00000000 _ZN4testC1Ev
+     /tmp/ccwpJX20.s:150    .bss.main:00000000 main
+     /tmp/ccwpJX20.s:147    .bss.main:00000000 $d
+     /tmp/ccwpJX20.s:154    .rodata._ZTV4test:00000000 $d
+     /tmp/ccwpJX20.s:170    .text._ZN4testD2Ev:00000000 _ZN4testD1Ev
+     /tmp/ccwpJX20.s:226    .text._ZN4testD0Ev:00000000 _ZN4testD0Ev
+     /tmp/ccwpJX20.s:165    .text._ZN4testD2Ev:00000000 $t
+     /tmp/ccwpJX20.s:170    .text._ZN4testD2Ev:00000000 _ZN4testD2Ev
+     /tmp/ccwpJX20.s:214    .text._ZN4testD2Ev:00000034 $d
+     /tmp/ccwpJX20.s:221    .text._ZN4testD0Ev:00000000 $t
+     /tmp/ccwpJX20.s:258    .text._Z41__static_initialization_and_destruction_0ii:00000000 $t
+     /tmp/ccwpJX20.s:262    .text._Z41__static_initialization_and_destruction_0ii:00000000 _Z41__static_initialization_and_destruction_0ii
+     /tmp/ccwpJX20.s:310    .text._GLOBAL__sub_I_main:00000000 $t
+     /tmp/ccwpJX20.s:314    .text._GLOBAL__sub_I_main:00000000 _GLOBAL__sub_I_main
+     /tmp/ccwpJX20.s:337    .init_array:00000000 $d
+                     .debug_frame:00000010 $d
+                           .group:00000000 _ZN4testC5Ev
+                           .group:00000000 _ZN4testD5Ev
+                           .group:00000000 wm4.1.4bcac17c4792917b2ba5e2a4796f5f5e
+                           .group:00000000 wm4.rodosapis.h.15.0e6831dceea37efa2bc1353c1d21da83
+                           .group:00000000 wm4.newlib.h.8.a9901dc52d1357e3e94003403d43f8b5
+                           .group:00000000 wm4.features.h.22.b72b3baab2bb2eab3661375590100b6b
+                           .group:00000000 wm4.config.h.193.5fb8ef056cdff92dec3dee9552839d8c
+                           .group:00000000 wm4._ansi.h.23.fff5fb436fa813a3c343750c1b5c0dee
+                           .group:00000000 wm4.stdint.h.20.54ad762faa59e3c05491630641c8d8bf
+                           .group:00000000 wm4.stddef.h.40.d401a05faad284016f61f130946a7dc0
+                           .group:00000000 wm4.debug.h.60.5e4d396daa73eb89d4dd5cb7785a4940
+                           .group:00000000 wm4.userconfig.h.15.4b779a6c48326c33ab80165d996a01d6
+                           .group:00000000 wm4.params.h.25.6786f6296fc5041e7e2622766914213c
+                           .group:00000000 wm4.hw_thread_defs.h.49.33c5a370dbbf870dc88c401bd6f04ef9
+                           .group:00000000 wm4.timemodel.h.69.fd37f23e589aac5d4e48c94135c9fb54
+                           .group:00000000 wm4.reserved_application_ids.h.3.a7d344bdbd76719670cac32f25715090
+                           .group:00000000 wm4.thread.h.52.3da6386f3345241419d8fed3fc2b4984
+                           .group:00000000 wm4.semaphore.h.50.f264a5bb73af55571809fd59fef0eaec
+                           .group:00000000 wm4.reserved_topic_ids.h.3.ee638471f5024ddaa9a33c286bbffbf9
+                           .group:00000000 wm4._default_types.h.6.5e12cd604db8ce00b62bb2f02708eaf3
+                           .group:00000000 wm4.lock.h.2.9bc98482741e5e2a9450b12934a684ea
+                           .group:00000000 wm4.stddef.h.161.295bec9bd195070211f2a910b7059fa9
+                           .group:00000000 wm4.types.h.2.e9cec8c90ab35f77d9f499e06ae02400
+                           .group:00000000 wm4.types.h.80.1f2c84c0d57dd52dd9936095d9ac218e
+                           .group:00000000 wm4.stdarg.h.31.b70f21342353634f7b44d85f85f13832
+                           .group:00000000 wm4.linkinterfaceuart.h.64.049492809827f6ca46297efb16c6ce0d
+                           .group:00000000 wm4.linkinterfacecan.h.19.60f979542a316508947b99ad5ed5929e
+                           .group:00000000 wm4.linkinterfaceshm.h.8.41949ad249c2315ff5f19839d8e856e0
+
+UNDEFINED SYMBOLS
+_ZN5RODOS6PRINTFEPKcz
+_ZN5RODOS6ThreadC2EPKcll
+_ZN5RODOS6ThreadD2Ev
+_ZdlPv
+__dso_handle
+__aeabi_atexit
