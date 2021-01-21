@@ -77,17 +77,14 @@ struct Data {
 	float z;
 };
 
-/*
- enum config_axes {
- X, Y, Z
- } config; // wird verwendet um IMU zu initialisieren
- */
-
 /// Globale Variablen
 /// Hardware
 HAL_GPIO button(GPIO_000); // blauer Button
-//	LEDs			grün	 orange		rot		   blau
-HAL_GPIO LED[4] = { GPIO_060, GPIO_061, GPIO_062, GPIO_063 };
+// Definition LEDs:
+HAL_GPIO led_green(GPIO_060);
+HAL_GPIO led_orange(GPIO_061);
+HAL_GPIO led_red(GPIO_062);
+HAL_GPIO led_blue(GPIO_063);
 
 /*
  * grün = SignalProcessing
@@ -107,6 +104,8 @@ HAL_GPIO CS_M(GPIO_041); // IMU Chip Pin für Magnometer
 const float LSB_G = 70e-3f;
 const float LSB_A = 0.061e-3f;
 const float LSB_M = 0.14e-3f;
+
+const float rad2deg = 180.0f * 3.14159265f; // *M_PI;
 
 /// Intertask
 // UART -> Interpreter/StateMachine
@@ -128,19 +127,19 @@ static void ToggleLED(HAL_GPIO& led, uint32_t length_ms) {
 	led.setPins(0);
 }
 
-static void changeLED(HAL_GPIO& led, bool on = true) {
-	led.setPins(on);
-}
+/*static void changeLED(HAL_GPIO& led, bool on = true) {
+ led.setPins(on);
+ }*/
 
 // Schreibt einen String in UART:
-static void writeUART(HAL_UART& uart, const char* string) {
+static void write2UART(const char* string) {
 	const int len = strlen(string);
 
 	char *str = (char*) calloc(sizeof(char), len + 1);
 
 	sprintf(str, "\n%s", string); // TODO \r evtl. noch anfügen!
 
-	uart.write(str, len);
+	BT2UART.write(str, len);
 
 	free(str);
 }
@@ -165,7 +164,7 @@ static void initAG(HAL_SPI& imu, HAL_GPIO& pin) {
 
 	// Prüfen ob Fehler auftraten:
 	if ((i < 0) || (j < 0))
-		writeUART(BT2UART, "FEHLER INITIALISIERUNG!");
+		write2UART("FEHLER INITIALISIERUNG!");
 
 	// Kommunikation schließen:
 	pin.setPins(1);
@@ -173,7 +172,7 @@ static void initAG(HAL_SPI& imu, HAL_GPIO& pin) {
 
 // Initialisiert Magnetometer:
 static void initM(HAL_SPI& imu, HAL_GPIO& pin) {
-	// Kommunikation initiieren:
+	// Kommunikation initieren:
 	pin.setPins(0);
 
 	// If write, bit 0 of the subAddress (MSB) should be 0;
@@ -188,7 +187,7 @@ static void initM(HAL_SPI& imu, HAL_GPIO& pin) {
 
 	// Prüfen ob Fehler auftraten:
 	if ((i < 0) || (j < 0) || (k < 0))
-		writeUART(BT2UART, "FEHLER INITIALISIERUNG!");
+		write2UART("FEHLER INITIALISIERUNG!");
 
 	// Kommunikation schließen:
 	pin.setPins(1);
@@ -207,9 +206,9 @@ static void readSensor2Bytes(int16_t& _temp, HAL_GPIO& pin,
 	const int i = IMU.writeRead(addr, 1, temp, 3); // 2 Bytes lesen
 
 	if (i < 0)
-		writeUART(BT2UART, "FEHLER READING 2 BYTES!");
+		write2UART("ERROR READING 3 BYTES!");
 
-	int16_t temperature = (int16_t) ((temp[2] << 8) | temp[1]); // Temperatur ist ein 12-bit signed Integer
+	int16_t temperature = (int16_t) ((temp[2] << 8) | temp[1]);
 
 	_temp = temperature;
 
@@ -229,14 +228,14 @@ static void readSensor6Bytes(int16_t (&arr)[3], HAL_GPIO& pin,
 	const int i = IMU.writeRead(addr, 1, temp, 7); // wg. Duplex ein Byte mehr!
 
 	if (i < 0)
-		writeUART(BT2UART, "FEHLER READING 6 BYTES!");
+		write2UART("ERROR READING 7 BYTES!");
 
-	int16_t x, y, z; // kombiniert je zwei 8-Bit-Register zu 16-Bit Ganzzahl
+	int16_t x = 0, y = 0, z = 0; // kombiniert je zwei 8-Bit-Register zu 16-Bit Ganzzahl
 	x = (int16_t) ((temp[2] << 8) | temp[1]);
 	y = (int16_t) ((temp[4] << 8) | temp[3]);
 	z = (int16_t) ((temp[6] << 8) | temp[5]);
 
-	// Ganzzahlen noch mit jeweiligem LSB multiplizieren um Dezimalwert zu erhalten:
+	// Ganzzahlen später noch mit jeweiligem LSB multiplizieren um Dezimalwert zu erhalten:
 	arr[0] = x;
 	arr[1] = y;
 	arr[2] = z;
@@ -246,246 +245,38 @@ static void readSensor6Bytes(int16_t (&arr)[3], HAL_GPIO& pin,
 }
 
 //*******************************************************************************
-
-// Nimmt 100 Messungen im Abstand von 10ms auf und gibt gemittelte Werte zurück
-static void calibrate(int64_t (&Offset)[3], HAL_GPIO& sensor,
-		uint8_t regAddress, uint16_t length_ms = 50, uint32_t numberOfSamples =
-				100) {
-	int64_t data[3]; // summiert auf, muss daher größer als 16 Bits sein!
-	int16_t temp[3];
-
-	for (uint i = 0; i < numberOfSamples; i++) {
-		readSensor6Bytes(temp, sensor, regAddress); // Hier mit LSB 1, damit die Werte ohne Nachkommastellen in Ganzzahl konvertiert werden können und nichts abgeschnitten wird
-
-		data[0] += temp[0];
-		data[1] += temp[1];
-		data[2] += temp[2];
-
-		AT(NOW() + length_ms * MILLISECONDS); // 100 * 10 ms = 1 s (Nach jeder Messung kurz warten, bis die nächste aufgenommen wird
-	}
-
-	// Offset zuweisen und zurückgeben:
-	Offset[0] = (data[0]);
-	Offset[1] = (data[1]);
-	Offset[2] = (data[2]);
-}
-
-// Kalibriert Beschleunigungssensor
-static void calibrateAcc(int16_t (&Offset_A)[3]) {
-	// Vorgehensweise:
-	// erst z-, dann x-, zuletzt y-Achse kalibrieren! Dies dauert jeweils 1 s, dazwischen eine weitere Sekunde warten um Board in Position zu bringen
-	ToggleLED(LED[3], 250);
-
-	int64_t P1[3] = { 0, 0, 0 }, P2[3] = { 0, 0, 0 }, P3[3] = { 0, 0, 0 };
-
-	// ######################################################
-	calibrate(P1, CS_AG, OUT_X_XL); // x = 0, y = 0, z = 1*g
-	// ######################################################
-
-	ToggleLED(LED[3], 500);
-	AT(NOW() + 1 * SECONDS);
-	ToggleLED(LED[3], 500);
-
-	// ######################################################
-	calibrate(P2, CS_AG, OUT_X_XL); // x = 1*g, y = 0, z = 0
-	// ######################################################
-
-	ToggleLED(LED[3], 500);
-	AT(NOW() + 1 * SECONDS);
-	ToggleLED(LED[3], 500);
-
-	// ######################################################
-	calibrate(P3, CS_AG, OUT_X_XL); // x = 0, y = 1*g, z = 0
-	// ######################################################
-
-	ToggleLED(LED[3], 500);
-	AT(NOW() + 500 * MILLISECONDS);
-
-	// Werte ausrechnen:
-	// Dabei vernachlässigen das Nachkommastelle gerundet wird, da es sich um sehr große Zahlen handert, dürfte das Ergebnis nur sehr gering vom exakten Wert abweichen:
-	Offset_A[0] = static_cast<int16_t>((P1[0] + P3[0]) / 200.0); // Offset x-Achse
-	Offset_A[1] = static_cast<int16_t>((P1[1] + P2[1]) / 200.0); // Offset y-Achse
-	Offset_A[2] = static_cast<int16_t>((P3[2] + P2[2]) / 200.0); // Offset z-Achse
-
-	// Abschluss signalisieren:
-	ToggleLED(LED[3], 500);
-	AT(NOW() + 500 * MILLISECONDS);
-	ToggleLED(LED[3], 500);
-}
-
-// Kalibriert Gyroskop
-static void calibrateGyro(int16_t (&Offset_G)[3]) {
-	// Vorgehensweise:
-	// erst z-, dann x-, zuletzt y-Achse kalibrieren! Dies dauert jeweils 1 s, dazwischen eine weitere Sekunde warten um Board in Position zu bringen
-	ToggleLED(LED[3], 500);
-
-	int64_t P1[3] = { 0, 0, 0 }, P2[3] = { 0, 0, 0 }, P3[3] = { 0, 0, 0 };
-
-	// ######################################################
-	calibrate(P1, CS_AG, OUT_X_G, 20); // z-Achse
-	// ######################################################
-
-	ToggleLED(LED[3], 500);
-	AT(NOW() + 1 * SECONDS);
-	ToggleLED(LED[3], 500);
-
-	// ######################################################
-	calibrate(P2, CS_AG, OUT_X_G, 20); // x-Achse
-	// ######################################################
-
-	ToggleLED(LED[3], 500);
-	AT(NOW() + 1 * SECONDS);
-	ToggleLED(LED[3], 500);
-
-	// ######################################################
-	calibrate(P3, CS_AG, OUT_X_G, 20); // y-Achse
-	// ######################################################
-
-	ToggleLED(LED[3], 500);
-	AT(NOW() + 500 * MILLISECONDS);
-
-	// Werte ausrechnen:
-	Offset_G[0] = P2[0] / 100.0; // Offset x-Achse
-	Offset_G[1] = P3[1] / 100.0; // Offset y-Achse
-	Offset_G[2] = P1[2] / 100.0; // Offset z-Achse
-
-	// Abschluss signalisieren:
-	ToggleLED(LED[3], 500);
-	AT(NOW() + 500 * MILLISECONDS);
-	ToggleLED(LED[3], 500);
-}
-
-// Kalibriert Magnetometer
-static void calibrateMag(int16_t (&Offset_M)[3][2]) {
-	// Vorgehensweise:
-	// erst z-, dann x-, zuletzt y-Achse kalibrieren!
-	ToggleLED(LED[3], 500);
-
-	int16_t M_c[2] = {0, 0}; // speichert über Kalibrierung den gemessenen Min- ([0]) und Maxwert ([1])
-	int64_t time; // speichert die Zeit bei Beginn, sodass genau 2 Sekunden kalibriert werden kann
-	// ######################################################
-	time = NOW();
-	do {
-		int16_t currVal; // immer der aktuell gemessene Wert
-
-		// Messung abrufen:
-		readSensor2Bytes(currVal, CS_M, OUT_Z_L_M);
-
-		// prüfen ob der Wert gespeichert werden soll:
-		if (currVal < M_c[0])
-			M_c[0] = currVal;
-		else if (currVal > M_c[1])
-			M_c[1] = currVal;
-
-	} while (NOW() < (time + 2 * SECONDS));
-
-	// In M_c befinden sich jetzt der Min/Max-Wert für Z-Achse, diesen speichern:
-	Offset_M[2][0] = M_c[0];
-	Offset_M[2][1] = M_c[1];
-
-	// Zwischenspeicher zurücksetzen:
-	M_c[0] = 0;
-	M_c[1] = 0;
-	// ######################################################
-
-	ToggleLED(LED[3], 500);
-	AT(NOW() + 1 * SECONDS);
-	ToggleLED(LED[3], 500);
-
-	// ######################################################
-	time = NOW();
-	do {
-		int16_t currVal; // immer der aktuell gemessene Wert
-
-		// Messung abrufen:
-		readSensor2Bytes(currVal, CS_M, OUT_X_L_M);
-
-		// prüfen ob der Wert gespeichert werden soll:
-		if (currVal < M_c[0])
-			M_c[0] = currVal;
-		else if (currVal > M_c[1])
-			M_c[1] = currVal;
-
-	} while (NOW() < (time + 2 * SECONDS));
-
-	// In M_c befinden sich jetzt der Min/Max-Wert für X-Achse, diesen speichern:
-	Offset_M[0][0] = M_c[0];
-	Offset_M[0][1] = M_c[1];
-
-	// Zwischenspeicher zurücksetzen:
-	M_c[0] = 0;
-	M_c[1] = 0;
-	// ######################################################
-
-	ToggleLED(LED[3], 500);
-	AT(NOW() + 1 * SECONDS);
-	ToggleLED(LED[3], 500);
-
-	// ######################################################
-	time = NOW();
-	do {
-		int16_t currVal; // immer der aktuell gemessene Wert
-
-		// Messung abrufen:
-		readSensor2Bytes(currVal, CS_M, OUT_Y_L_M);
-
-		// prüfen ob der Wert gespeichert werden soll:
-		if (currVal < M_c[0])
-			M_c[0] = currVal;
-		else if (currVal > M_c[1])
-			M_c[1] = currVal;
-
-	} while (NOW() < (time + 2 * SECONDS));
-
-	// In M_c befinden sich jetzt der Min/Max-Wert für Y-Achse, diesen speichern:
-	Offset_M[1][0] = M_c[0];
-	Offset_M[1][1] = M_c[1];
-
-	// Zwischenspeicher zurücksetzen:
-	M_c[0] = 0;
-	M_c[1] = 0;
-	// ######################################################
-
-	ToggleLED(LED[3], 500);
-	AT(NOW() + 500 * MILLISECONDS);
-
-	// Abschluss signalisieren:
-	ToggleLED(LED[3], 500);
-	AT(NOW() + 500 * MILLISECONDS);
-	ToggleLED(LED[3], 500);
-}
-
-//*******************************************************************************
-
 // Berechnet über Daten des Accelerometer die Orientierung
-static void calcRP_Acc(float& pitch, float& roll, float x, float y, float z) {
-	roll = atan2(y, z);
-	pitch = atan2(-x, sqrt(y * y + z * z));
+static void calcRollPitchByAccel(float& pitch, float& roll, float a_x,
+		float a_y, float a_z) {
+
+	pitch = atan2f(-a_x, sqrt(a_y * a_y + a_z * a_z));
+	roll = atan2f(a_y, a_z);
 }
-/*
- // Berechnet über Daten des Gyrometer die Orientierung
- static void calcY_Mag(float& yaw, float mx, float my, float mz) {
- yaw = atan2(my, mx);
- }
- */
-static float calcYaw(float gz) {
-	return gz * 0.05;
+
+static float calcHeadingAngleByMagno(float pitch, float roll, float M_x_s,
+		float M_y_s, float M_z_s) {
+	const float M_x_h = M_x_s * cosf(pitch) + M_z_s * sinf(pitch);
+	const float M_y_h = M_x_s * sinf(roll) * sinf(pitch) + M_y_s * cosf(roll)
+			- M_z_s * sinf(roll) * cosf(pitch);
+
+	return atan2f(M_y_h, M_x_h);
 }
 
 //*******************************************************************************
 
+// Liest Messdaten aus Sensor & Kalibriert diesen bzw. sendet Daten über Buffer
 class SignalProcessing: public Thread, public SubscriberReceiver<Command> {
-	uint interval; // Standard: 50 ms
+	uint interval; // Standard: 300 ms
 
 	// Accelerometer
-	int16_t Offset_A[3]; // Offset Beschleunigungssensor
-	int16_t Value_A[3]; // Speichert zuletzt gemessene Beschleunigungsdaten pro Achse
+	float Offset_A[3]; // Offset Beschleunigungssensor
+	float Value_A[3]; // Speichert zuletzt gemessene Beschleunigungsdaten pro Achse
 	// Gyroscope
-	int16_t Offset_G[3]; // Offset Gyroskop
-	int16_t Value_G[3]; // Speichert zuletzt gemessene Daten des Gyroskops pro Achse
+	float Offset_G[3]; // Offset Gyroskop
+	float Value_G[3]; // Speichert zuletzt gemessene Daten des Gyroskops pro Achse
 	// Magnetometer
-	int16_t Offset_M[3][2]; // zwei Werte für jede Achse: Min[0]/Max[1] Wert der Kalibrierung!
-	int16_t Value_M[3]; // Speichert zuletzt gemessene Daten des Magnetometers pro Achse
+	float Offset_M[3][2]; // zwei Werte für jede Achse: Min[0]/Max[1] Wert der Kalibrierung!
+	float Value_M[3]; // Speichert zuletzt gemessene Daten des Magnetometers pro Achse
 
 	float Value_Temp; // Speichert zuletzt gemessene Temperatur, ausnahmsweise in Float und nicht Ganzzahl speichern, da kein Offset und keine Kalibrierung nötig
 
@@ -494,8 +285,8 @@ class SignalProcessing: public Thread, public SubscriberReceiver<Command> {
 public:
 	SignalProcessing() :
 			SubscriberReceiver<Command>(TopicTelemetry,
-					"TopicIntervalSignalProcessingReceiver"), interval(100) { // abonniert Interval-Topic
-		// Standart: 100 ms
+					"TopicIntervalSignalProcessingReceiver"), interval(300) { // abonniert Interval-Topic
+		// Standart: 300 ms
 		calibration_complete = false;
 		Value_Temp = 0.0;
 	}
@@ -506,8 +297,8 @@ public:
 
 	void init(void) {
 		// zugehörige LEDs auf Ausgang schalten:
-		LED[0].init(1, 1, 1); // Aufgabenstellung (grün)
-		LED[3].init(1, 1, 1); // Kalibrierung (blau)
+		led_green.init(1, 1, 0); // Aufgabenstellung (grün)
+		led_blue.init(1, 1, 0); // Kalibrierung (blau)
 
 		// Button auf Eingang schalten:
 		button.init();
@@ -518,37 +309,30 @@ public:
 		// Initialisieren: Beschleunigungssensor & Gyroskop:
 		CS_AG.init(true, 1, 1); // Init Gyro & Accelerometer
 		initAG(IMU, CS_AG); // Einstellungen in Register schreiben
-		writeUART(BT2UART,
+		write2UART(
 				"Initialisierung Beschleunigungssensor und Gyroskop abgeschlossen...");
 
 		// Initialisieren: Magnetometer:
 		CS_M.init(true, 1, 1); // Init Magnometer
 		initM(IMU, CS_M); // Einstellungen in Register schreiben
-		writeUART(BT2UART, "Initialisierung Magnetometer abgeschlossen...");
+		write2UART("Initialisierung Magnetometer abgeschlossen...");
 
 		// ALLE Variablen mit Null initialisieren:
-		Offset_A[0] = 0;
-		Offset_A[1] = 0;
-		Offset_A[2] = 0;
+		Offset_A[0] = 0.0, Offset_A[1] = 0.0, Offset_A[2] = 0.0;
+		Offset_M[0][0] = 0.0, Offset_M[0][1] = 0.0;
+		Offset_M[1][0] = 0.0, Offset_M[1][1] = 0.0;
+		Offset_M[2][0] = 0.0, Offset_M[2][1] = 0.0;
+		Offset_G[0] = 0.0, Offset_G[1] = 0.0, Offset_G[2] = 0.0;
 
-		Offset_M[0][0] = 0;
-		Offset_M[0][1] = 0;
-		Offset_M[1][0] = 0;
-		Offset_M[1][1] = 0;
-		Offset_M[2][0] = 0;
-		Offset_M[2][1] = 0;
-
-		Offset_G[0] = 0;
-		Offset_G[1] = 0;
-		Offset_G[2] = 0;
+		Value_A[0] = 0.0, Value_A[1] = 0.0, Value_A[2] = 0.0;
+		Value_G[0] = 0.0, Value_G[1] = 0.0, Value_G[2] = 0.0;
+		Value_M[0] = 0.0, Value_M[0] = 0.0, Value_M[2] = 0.0;
 	}
 
 	void put(Command& data) {
 		Command* _data = (Command*) &data;
 
 		// Interval ändern:
-		//if (_data->id == 'I')
-		//	this->interval = _data->value;
 		switch (_data->id) {
 		case 'I':
 			this->interval = (uint) (_data->value);
@@ -564,76 +348,315 @@ public:
 					static uint8_t counter = 1;
 
 					if (button.readPins() == 1) { // prüfen ob Button gedrückt wurde
-						ToggleLED(LED[3], 400);
+						ToggleLED(led_blue, 500); // blau
 						AT(NOW() + 500 * MILLISECONDS); // kurz warten bevor kalibriert wird um nicht irgendwie nächste Schleifeniteration auch gleich zu aktivieren
 
 						// Reihenfolge jeweils: x, y, z
 						// Unterscheiden, in welcher Kalibrierungsphase wir sind (1-3)
 						switch (counter) {
-						case 1:
+						case 1: {
 							// Accelerometer
-							calibrateAcc(this->Offset_A);
-							writeUART(BT2UART,
+							write2UART("Accelerometer wird kalibriert:\n");
+
+							int16_t temp[3] = { 0, 0, 0 }; // Offset-Werte: summiert auf, muss daher größer als 16 Bits sein!
+							int64_t P1[3] = { 0, 0, 0 }, P2[3] = { 0, 0, 0 },
+									P3[3] = { 0, 0, 0 };
+
+							// Vorgehensweise:
+							// erst z-, dann x-, zuletzt y-Achse kalibrieren! Dies dauert jeweils 1 s, dazwischen eine weitere Sekunde warten um Board in Position zu bringen
+							ToggleLED(led_blue, 250);
+
+							// ######################################################
+							// x = 0, y = 0, z = 1*g
+							write2UART("z-Achse wird kalibriert...\n");
+							AT(NOW() + 1 * SECONDS);
+							for (uint i = 0; i < 100; i++) {
+								readSensor6Bytes(temp, CS_AG, OUT_X_XL);
+								P3[0] += temp[0]; // x-Achse (0g)
+								P3[1] += temp[1]; // y-Achse (0g)
+								P3[2] += temp[2]; // z-Achse (1g)
+								AT(NOW() + 100 * MILLISECONDS); // Nach jeder Messung kurz warten, bis die nächste aufgenommen wird
+							}
+							// ######################################################
+
+							ToggleLED(led_blue, 500);
+							AT(NOW() + 1 * SECONDS);
+							ToggleLED(led_blue, 500);
+
+							// ######################################################
+							// x = 1*g, y = 0, z = 0
+							write2UART("x-Achse wird kalibriert...\n");
+							AT(NOW() + 1 * SECONDS);
+							for (uint i = 0; i < 100; i++) {
+								readSensor6Bytes(temp, CS_AG, OUT_X_XL);
+								P1[0] += temp[0]; // x-Achse (1g)
+								P1[1] += temp[1]; // y-Achse (0g)
+								P1[2] += temp[2]; // z-Achse (0g)
+								AT(NOW() + 100 * MILLISECONDS); // Nach jeder Messung kurz warten, bis die nächste aufgenommen wird
+							}
+							// ######################################################
+
+							ToggleLED(led_blue, 500);
+							AT(NOW() + 1 * SECONDS);
+							ToggleLED(led_blue, 500);
+
+							// ######################################################
+							// x = 0, y = 1*g, z = 0
+							write2UART("y-Achse wird kalibriert...\n");
+							AT(NOW() + 1 * SECONDS);
+							for (uint i = 0; i < 100; i++) {
+								readSensor6Bytes(temp, CS_AG, OUT_X_XL);
+								P2[0] += temp[0]; // x-Achse (0g)
+								P2[1] += temp[1]; // y-Achse (0g)
+								P2[2] += temp[2]; // z-Achse (1g)
+								AT(NOW() + 100 * MILLISECONDS); // Nach jeder Messung kurz warten, bis die nächste aufgenommen wird
+							}
+							// ######################################################
+
+							ToggleLED(led_blue, 500);
+							AT(NOW() + 1 * SECONDS);
+
+							// Werte ausrechnen:
+							// Dabei vernachlässigen das Nachkommastelle gerundet wird, da es sich um sehr große Zahlen handert, dürfte das Ergebnis nur sehr gering vom exakten Wert abweichen:
+							Offset_A[0] = ((P2[0] + P3[0]) / 200.0) * LSB_A; // Offset x-Achse
+							Offset_A[1] = ((P1[1] + P3[1]) / 200.0) * LSB_A; // Offset y-Achse
+							Offset_A[2] = ((P1[2] + P2[2]) / 200.0) * LSB_A; // Offset z-Achse
+
+							// Abschluss signalisieren:
+							ToggleLED(led_blue, 500);
+							AT(NOW() + 1 * SECONDS);
+							ToggleLED(led_blue, 500);
+
+							write2UART(
 									"-- Kalibrierung Beschleunigungssensor abgeschlossen... --");
 							{
 								const char* cal_acc_msg =
-										"Acc: Offset-X=%3.8f g, Offset-Y=%3.8f g, Offset-Z=%3.8f g\0";
-								char cal_acc_str[79];
+										"Acc: Offset-X=%2.5f g, Offset-Y=%2.5f g, Offset-Z=%2.5f g\0";
+								char cal_acc_str[67];
 								sprintf(cal_acc_str, cal_acc_msg,
-										static_cast<float>(this->Offset_A[0]
-												* LSB_A),
-										static_cast<float>(this->Offset_A[1]
-												* LSB_A),
-										static_cast<float>(this->Offset_A[2]
-												* LSB_A));
-								writeUART(BT2UART, cal_acc_str);
+										this->Offset_A[0], this->Offset_A[1],
+										this->Offset_A[2]);
+								write2UART(cal_acc_str);
 							}
+						}
 							break;
 
-						case 2:
+						case 2: {
 							// Gyroskope
-							calibrateGyro(this->Offset_G);
-							writeUART(BT2UART,
+							write2UART("Gyroskop wird kalibriert:\n");
+
+							double data[3] = { 0, 0, 0 }; // Offset-Werte: summiert auf, muss daher größer als 16 Bits sein!
+							const unsigned int N = 100;
+
+							// Vorgehensweise:
+							// erst z-, dann x-, zuletzt y-Achse kalibrieren! Dies dauert jeweils 1 s, dazwischen eine weitere Sekunde warten um Board in Position zu bringen
+							ToggleLED(led_blue, 500);
+
+							//int64_t P1[3] = { 0, 0, 0 }, P2[3] = { 0, 0, 0 }, P3[3] = { 0, 0, 0 };
+
+							// ######################################################
+							// z-Achse
+							write2UART("z-Achse wird kalibriert...\n");
+							AT(NOW() + 1 * SECONDS);
+							int16_t temp_z = 0;
+							for (uint i = 0; i < N; i++) {
+								readSensor2Bytes(temp_z, CS_AG, OUT_Z_G);
+								data[2] += (float)(temp_z * LSB_G); // z-Achse
+								AT(NOW() + 100 * MILLISECONDS); // Nach jeder Messung kurz warten, bis die nächste aufgenommen wird
+							}
+							// ######################################################
+
+							ToggleLED(led_blue, 500);
+							AT(NOW() + 1 * SECONDS);
+							ToggleLED(led_blue, 500);
+
+							// ######################################################
+							// x-Achse
+							write2UART("x-Achse wird kalibriert...\n");
+							AT(NOW() + 1 * SECONDS);
+							int16_t temp_x = 0;
+							for (uint i = 0; i < N; i++) {
+								readSensor2Bytes(temp_x, CS_AG, OUT_X_G);
+								data[0] += (float)(temp_x * LSB_G); // x-Achse
+								AT(NOW() + 100 * MILLISECONDS); // Nach jeder Messung kurz warten, bis die nächste aufgenommen wird
+							}
+							// ######################################################
+
+							ToggleLED(led_blue, 500);
+							AT(NOW() + 1 * SECONDS);
+							ToggleLED(led_blue, 500);
+
+							// ######################################################
+							// y-Achse
+							write2UART("y-Achse wird kalibriert...\n");
+							AT(NOW() + 1 * SECONDS);
+							int16_t temp_y = 0;
+							for (uint i = 0; i < N; i++) {
+								readSensor2Bytes(temp_y, CS_AG, OUT_Y_G);
+								data[1] += (float)(temp_y * LSB_G); // y-Achse
+								AT(NOW() + 100 * MILLISECONDS); // Nach jeder Messung kurz warten, bis die nächste aufgenommen wird
+							}
+							// ######################################################
+
+							ToggleLED(led_blue, 500);
+							AT(NOW() + 1 * SECONDS);
+
+							// Werte ausrechnen:
+							Offset_G[0] = (float)(data[0] / N); // Offset x-Achse
+							Offset_G[1] = (float)(data[1] / N); // Offset y-Achse
+							Offset_G[2] = (float)(data[2] / N); // Offset z-Achse
+
+							// Abschluss signalisieren:
+							ToggleLED(led_blue, 500);
+							AT(NOW() + 1 * SECONDS);
+							ToggleLED(led_blue, 500);
+
+							write2UART(
 									"-- Kalibrierung Gyroskop abgeschlossen... --");
 							{
 								const char* cal_gyro_msg =
-										"Gyro: Offset-X=%3.8f dps, Offset-Y=%3.8f dps, Offset-Z=%3.8f dps\0";
-								char cal_gyro_str[86];
+										"Gyro: Offset-X=%2.3f dps, Offset-Y=%2.3f dps, Offset-Z=%2.3f dps";
+								char cal_gyro_str[68];
 								sprintf(cal_gyro_str, cal_gyro_msg,
-										static_cast<float>(this->Offset_G[0]
-												* LSB_G),
-										static_cast<float>(this->Offset_G[1]
-												* LSB_G),
-										static_cast<float>(this->Offset_G[2]
-												* LSB_G));
-								writeUART(BT2UART, cal_gyro_str);
+										this->Offset_G[0], this->Offset_G[1],
+										this->Offset_G[2]);
+								write2UART(cal_gyro_str);
 							}
+						}
 							break;
 
-						case 3:
+						case 3: {
 							// Magnetometer
-							calibrateMag(this->Offset_M);
-							writeUART(BT2UART,
+							write2UART("Magnetometer wird kalibriert:\n");
+
+							const unsigned int N = 100;
+
+							// Vorgehensweise:
+							// erst z-, dann x-, zuletzt y-Achse kalibrieren!
+							ToggleLED(led_blue, 500);
+
+							int16_t M_c_Y[2] = { 0, 0 };
+
+							int64_t time; // speichert die Zeit bei Beginn, sodass genau 2 Sekunden kalibriert werden kann
+							// ######################################################
+							{
+								write2UART("z-Achse wird kalibriert...\n");
+								AT(NOW() + 1 * SECONDS);
+								int16_t currVal; // immer der aktuell gemessene Wert
+								float& M_z_min = this->Offset_M[2][0];
+								float& M_z_max = this->Offset_M[2][1];
+
+								int16_t M_c_Z[2] = { 0, 0 }; // speichert über Kalibrierung den gemessenen Min- ([0]) und Maxwert ([1])
+
+								for (int i = 0; i < N; i++) {
+									readSensor2Bytes(currVal, CS_M, OUT_Z_L_M);
+
+									// prüfen ob der Wert gespeichert werden soll:
+									if (currVal <= M_c_Z[0])
+										M_c_Z[0] = currVal;
+
+									if (currVal >= M_c_Z[1])
+										M_c_Z[1] = currVal;
+									AT(NOW() + 100 * MILLISECONDS);
+								}
+
+								// In M_c befinden sich jetzt der Min/Max-Wert für Z-Achse, diesen speichern:
+								M_z_min = (float)(M_c_Z[0] * LSB_M);
+								M_z_max = (float)(M_c_Z[1] * LSB_M);
+							}
+							// ######################################################
+
+							ToggleLED(led_blue, 500);
+							AT(NOW() + 1 * SECONDS);
+							ToggleLED(led_blue, 500);
+
+							// ######################################################
+							{
+								write2UART("x-Achse wird kalibriert...\n");
+								AT(NOW() + 1 * SECONDS);
+								int16_t currVal; // immer der aktuell gemessene Wert
+								float& M_x_min = this->Offset_M[0][0];
+								float& M_x_max = this->Offset_M[0][1];
+
+								int16_t M_c_X[2] = { 0, 0 };
+
+								for (int i = 0; i < N; i++) {
+									// Messung abrufen:
+									readSensor2Bytes(currVal, CS_M, OUT_X_L_M);
+
+									// prüfen ob der Wert gespeichert werden soll:
+									if (currVal <= M_c_X[0])
+										M_c_X[0] = currVal;
+
+									if (currVal >= M_c_X[1])
+										M_c_X[1] = currVal;
+
+									AT(NOW() + 100 * MILLISECONDS);
+								}
+
+								// In M_c befinden sich jetzt der Min/Max-Wert für X-Achse, diesen speichern:
+								M_x_min = (float)(M_c_X[0] * LSB_M);
+								M_x_max = (float)(M_c_X[1] * LSB_M);
+							}
+							// ######################################################
+
+							ToggleLED(led_blue, 500);
+							AT(NOW() + 1 * SECONDS);
+							ToggleLED(led_blue, 500);
+
+							// ######################################################
+							{
+								write2UART("y-Achse wird kalibriert...\n");
+								AT(NOW() + 1 * SECONDS);
+								int16_t currVal; // immer der aktuell gemessene Wert
+								float& M_y_min = this->Offset_M[1][0];
+								float& M_y_max = this->Offset_M[1][1];
+
+								int16_t M_c_Y[2] = { 0, 0 };
+
+								for (int i = 0; i < N; i++) {
+									// Messung abrufen:
+									readSensor2Bytes(currVal, CS_M, OUT_Y_L_M);
+
+									// prüfen ob der Wert gespeichert werden soll:
+									if (currVal <= M_c_Y[0])
+										M_c_Y[0] = currVal;
+
+									if (currVal >= M_c_Y[1])
+										M_c_Y[1] = currVal;
+									AT(NOW() + 100 * MILLISECONDS);
+								}
+
+								// In M_c befinden sich jetzt der Min/Max-Wert für Y-Achse, diesen speichern:
+								M_y_min = (float)(M_c_Y[0] * LSB_M);
+								M_y_max = (float)(M_c_Y[1] * LSB_M);
+							}
+							// ######################################################
+
+							ToggleLED(led_blue, 500);
+							AT(NOW() + 1 * SECONDS);
+
+							// Abschluss signalisieren:
+							ToggleLED(led_blue, 500);
+							AT(NOW() + 1 * SECONDS);
+							ToggleLED(led_blue, 500);
+
+							write2UART(
 									"-- Kalibrierung Magnetometer abgeschlossen... --");
 							{
 								const char* cal_mag_msg =
-										"Mag: Offset-X_max=%3.8f gauss, Offset-Y_max=%3.8f gauss, Offset-Z_max=%3.8f gauss\nOffset-X_min=%3.8f gauss, Offset-Y_min=%3.8f gauss, Offset-Z_min=%3.8f gauss\0";
-								char cal_mag_str[201];
+										"Mag: Offset-X_max=%4.5f gauss, Offset-Y_max=%4.5f gauss, Offset-Z_max=%4.5f gauss\nOffset-X_min=%4.5f gauss, Offset-Y_min=%4.5f gauss, Offset-Z_min=%4.5f gauss\0";
+								char cal_mag_str[189];
 								sprintf(cal_mag_str, cal_mag_msg,
-										static_cast<float>(this->Offset_M[0][1]
-												* LSB_M),
-										static_cast<float>(this->Offset_M[1][1]
-												* LSB_M),
-										static_cast<float>(this->Offset_M[2][1]
-												* LSB_M),
-										static_cast<float>(this->Offset_M[0][0]
-												* LSB_M),
-										static_cast<float>(this->Offset_M[1][0]
-												* LSB_M),
-										static_cast<float>(this->Offset_M[2][0]
-												* LSB_M));
-								writeUART(BT2UART, cal_mag_str);
+										this->Offset_M[0][1],
+										this->Offset_M[1][1],
+										this->Offset_M[2][1],
+										this->Offset_M[0][0],
+										this->Offset_M[1][0],
+										this->Offset_M[2][0]);
+								write2UART(cal_mag_str);
 							}
+						}
 							break;
 						}
 
@@ -645,100 +668,91 @@ public:
 
 					} else {
 						// wird der Button nicht gedrückt, durch schnelles Aufblinken der LED die Bereitschaft signalisieren, weiter zu machen:
-						ToggleLED(LED[3], 150);
+						ToggleLED(led_blue, 200);
 					}
 				}
 
-				writeUART(BT2UART,
-						"## Kalibrierung erfolgreich abgeschlossen! ##");
-
-				// Kalibrierung fertig, zur Signalisierung, einmal kurz mit allen LEDs aufleuchten:
-				{
-					for (int i = 0; i < 4; i++)
-						LED[i].setPins(1);
-					AT(NOW() + 1 * SECONDS);
-					for (int i = 0; i < 4; i++)
-						LED[i].setPins(0);
-				}
-
-				// anschließend alle Offsets in UART ausgeben:
-
-				//, Offsets ausgeben:
+				write2UART("## Kalibrierung erfolgreich abgeschlossen! ##");
 
 				this->calibration_complete = true;
-
+				continue;
 			}
+			// ########################### NEUE SENSORDATEN ###########################
+			// zugehörige LED toggeln:
+			ToggleLED(led_green, 500);
 
-				// ########################### NEUE SENSORDATEN ###########################
-				// zugehörige LED toggeln:
-				ToggleLED(LED[0], 500);
+			{
+				// Accelerometer:
+				int16_t temp[3] = { 0, 0, 0 };
 
-				{
-					// Accelerometer:
-					int16_t temp[3] = { 0, 0, 0 };
+				readSensor6Bytes(temp, CS_AG, OUT_X_XL);
 
-					readSensor6Bytes(temp, CS_AG, OUT_X_XL);
+				Data data;
+				data.x = temp[0] * LSB_A - this->Offset_A[0];
+				data.y = temp[1] * LSB_A - this->Offset_A[1];
+				data.z = temp[2] * LSB_A - this->Offset_A[2];
 
-					Data data;
-					data.x = int(temp[0] - this->Offset_A[0]) * LSB_A;
-					data.y = int(temp[1] - this->Offset_A[1]) * LSB_A;
-					data.z = int(temp[2] - this->Offset_A[2]) * LSB_A;
+				cbAcc.put(data);
+			}
+			// ******************
 
-					cbAcc.put(data);
-				}
-				// ******************
+			// ******************
+			// Gyroscope:
+			{
+				int16_t temp[3] = { 0, 0, 0 };
+				readSensor2Bytes(temp[0], CS_AG, OUT_X_G);
+				readSensor2Bytes(temp[1], CS_AG, OUT_Y_G);
+				readSensor2Bytes(temp[2], CS_AG, OUT_Z_G);
+				//readSensor6Bytes(temp, CS_AG, OUT_X_G);
 
-				// Gyroscope:
-				{
-					int16_t temp[3] = { 0, 0, 0 };
-					readSensor6Bytes(temp, CS_AG, OUT_X_G);
+				Data data;
+				data.x = temp[0] * LSB_G - this->Offset_G[0];
+				data.y = temp[1] * LSB_G - this->Offset_G[1];
+				data.z = temp[2] * LSB_G - this->Offset_G[2];
 
-					Data data;
-					data.x = int(temp[0] - this->Offset_G[0]) * LSB_G;
-					data.y = int(temp[1] - this->Offset_G[1]) * LSB_G;
-					data.z = int(temp[2] - this->Offset_G[2]) * LSB_G;
+				cbGyr.put(data);
+			}
+			// ******************
 
-					cbGyr.put(data);
-				}
-				// ******************
+			// Magnetometer:
+			{
+				int16_t temp[3] = { 0, 0, 0 };
+				//readSensor6Bytes(temp, CS_M, OUT_X_L_M);
+				readSensor2Bytes(temp[0], CS_M, OUT_X_L_M);
+				readSensor2Bytes(temp[1], CS_M, OUT_Y_L_M);
+				readSensor2Bytes(temp[2], CS_M, OUT_Z_L_M);
 
-				// Magnetometer:
-				{
-					int16_t temp[3] = { 0, 0, 0 };
-					readSensor6Bytes(temp, CS_AG, OUT_X_L_M);
+				// Referenzen für Übersichtlichkeit:
+				const float& M_x_min = this->Offset_M[0][0];
+				const float& M_x_max = this->Offset_M[0][1];
 
-					Data data;
-					data.x =
-							((((temp[0] - this->Offset_M[0][0])
-									/ (this->Offset_M[0][1]
-											- this->Offset_M[0][0])) * 2) - 1)
-									* LSB_M;
-					data.y =
-							((((temp[1] - this->Offset_M[1][0])
-									/ (this->Offset_M[1][1]
-											- this->Offset_M[1][0])) * 2) - 1)
-									* LSB_M;
-					data.z =
-							((((temp[2] - this->Offset_M[2][0])
-									/ (this->Offset_M[2][1]
-											- this->Offset_M[2][0])) * 2) - 1)
-									* LSB_M;
+				const float& M_y_min = this->Offset_M[1][0];
+				const float& M_y_max = this->Offset_M[1][1];
 
-					cbMag.put(data);
-				}
-				// ******************
+				const float& M_z_min = this->Offset_M[2][0];
+				const float& M_z_max = this->Offset_M[2][1];
 
-				// Temperatur:
-				{
-					int16_t _temp = 0;
-					readSensor2Bytes(_temp, CS_AG, OUT_TEMP_L);
+				Data data;
+				data.x = ((((float)(temp[0] * LSB_M) - M_x_min) / (M_x_max - M_x_min))
+						* 2) - 1;
+				data.y = ((((float)(temp[1] * LSB_M) - M_y_min) / (M_y_max - M_y_min))
+						* 2) - 1;
+				data.z = ((((float)(temp[2] * LSB_M) - M_z_min) / (M_z_max - M_z_min))
+						* 2) - 1;
 
-					float temp = (float)((float)(_temp / 16.0f) + 25.0f);
+				cbMag.put(data);
+			}
+			// ******************
 
-					cbTemp.put(temp);
-				}
+			// Temperatur:
+			{
+				int16_t _temp = 0;
+				readSensor2Bytes(_temp, CS_AG, OUT_TEMP_L);
 
+				float temp = ((_temp / 16.0f) + 25.0f);
 
+				cbTemp.put(temp);
+			}
 
 			// mit Interval suspenden:
 			suspendCallerUntil(NOW()+ this->interval*MILLISECONDS);
@@ -748,31 +762,39 @@ public:
 
 //*******************************************************************************
 
-class telemetry: public Thread, public SubscriberReceiver<Command> {
+// Sendet gemäß den Usereinstellungen, angeforderte Telemetry-Daten über UART
+class telemetryThread: public Thread, public SubscriberReceiver<Command> {
 	uint interval;
 
 	// Beinhaltet die zuletzt über das Topic gesendeten Sensorwerte
 	float val_acc[3];
 	float val_gyro[3];
 	float val_mag[3];
-	float val_temp;
+	float roll, pitch, yaw; // Speichert Orientierungswinkel
 
 	enum tel {
 		all, acc, gyro, mag, temp, orient
 	} pt; // legt fest, welche Telemetriedaten in einem Interval gepostet werden sollen. Wird mit 0 (all) initialisiert!
 
 public:
-	telemetry() :
+	telemetryThread() :
 			SubscriberReceiver<Command>(TopicTelemetry,
 					"TopicIntervalSignalProcessingReceiver"), interval(1500), pt(
 					(tel) 0) {
+		// Orientierungswinkel initialisieren und auf Null setzen:
+		roll = 0.0, pitch = 0.0, yaw = 0.0;
 
-		val_temp = 0.0;
+		//val_temp = 0.0;
+	}
+
+	void init() {
+		led_orange.init(1, 1, 0);
 	}
 
 	void put(Command& data) {
 		Command* _data = (Command*) &data;
 
+		// korrekt so, da ab Q alles gleich behandelt wird
 		switch (_data->id) {
 		case 'T':
 			this->interval = _data->value;
@@ -791,46 +813,45 @@ public:
 	void run(void) {
 		while (1) {
 			if (spT.isCalibrated()) {
+				// Neue Daten abholen:
+				Data acc_data, gyr_data, mag_data;
+				float temperature;
+				cbAcc.get(acc_data);
+				cbGyr.get(gyr_data);
+				cbMag.get(mag_data);
+				cbTemp.get(temperature);
+
 				// ########################### AUSGABE TELEMETRIE ###########################
 				// zugehörige LED toggeln:
-				ToggleLED(LED[1], 500);
+				ToggleLED(led_orange, 500);					// orange
 
 				switch ((int) this->pt) {
 				case 0: // bei all einfach alle Fälle durchlaufen
 				case 1: {
 					// nur Acc
 					const char* acc_msg =
-							"Acc: x=%3.8f g, y=%3.8f g, z=%3.8f g\0";
+							"Acc: x=%2.4f g, y=%2.4f g, z=%2.4f g\0";
 
-					char acc_str[58]; // 40
+					char acc_str[43]; // 40
 
-					// Neuste Messwerte abrufen:
-					Data data;
+					sprintf(acc_str, acc_msg, acc_data.x, acc_data.y,
+							acc_data.z);
 
-					cbAcc.get(data);
-
-					sprintf(acc_str, acc_msg, data.x, data.y, data.z);
-
-					writeUART(BT2UART, acc_str);
+					write2UART(acc_str);
 				}
 					if (((int) this->pt) != 0)
 						break;
 				case 2: {
 					// nur Gyro
 					const char* gyro_msg =
-							"Gyro: x=%3.8f dps, y=%3.8f dps, z=%3.8f dps\0";
+							"Gyro: x=%5.5f dps, y=%5.5f dps, z=%5.5f dps\0";
 
-					char gyro_str[65];
+					char gyro_str[62];
 
-					// Neuste Messwerte abrufen:
-					Data data;
+					sprintf(gyro_str, gyro_msg, gyr_data.x * rad2deg,
+							gyr_data.y * rad2deg, gyr_data.z * rad2deg);
 
-					cbGyr.get(data);
-
-					sprintf(gyro_str, gyro_msg, data.x * 180.0 / M_PI,
-							data.y * 180.0 / M_PI, data.z * 180.0 / M_PI);
-
-					writeUART(BT2UART, gyro_str);
+					write2UART(gyro_str);
 				}
 					if (((int) this->pt) != 0)
 						break;
@@ -838,36 +859,27 @@ public:
 				case 3: {
 					// nur Mag
 					const char* mag_msg =
-							"Mag: x=%3.8f gauss, y=%3.8f gauss, z=%3.8f gauss\0";
+							"Mag: x=%4.5f gauss, y=%4.5f gauss, z=%4.5f gauss\0";
 
-					char mag_str[70];
+					char mag_str[64];
 
-					// Neuste Messwerte abrufen:
-					Data data;
+					sprintf(mag_str, mag_msg, mag_data.x, mag_data.y,
+							mag_data.z);
 
-					cbMag.get(data);
-
-					sprintf(mag_str, mag_msg, data.x, data.y, data.z);
-
-					writeUART(BT2UART, mag_str);
+					write2UART(mag_str);
 				}
 					if (((int) this->pt) != 0)
 						break;
 
 				case 4: {
 					// nur Temp
-					const char* temp_msg = "Temp: x=%3.5f C\0";
+					const char* temp_msg = "Temp: x=%2.2f C\0";
 
-					char temp_str[20];
+					char temp_str[16];
 
-					// Neuste Messung abrufen:
-					float temp;
+					sprintf(temp_str, temp_msg, temperature);
 
-					cbTemp.get(temp);
-
-					sprintf(temp_str, temp_msg, temp);
-
-					writeUART(BT2UART, temp_str);
+					write2UART(temp_str);
 				}
 					if (((int) this->pt) != 0)
 						break;
@@ -875,58 +887,50 @@ public:
 				case 5: {
 					// nur Orientierung:
 					const char* orient_msg =
-							"roll=%4.4f, pitch=%4.4f, yaw=%4.4f\0";
+							"roll=%4.2f, pitch=%4.2f, yaw=%4.2f\0";
 
-					char orient_str[47];
-
-					// Neuste Daten abrufen:
-
-					Data acc;
-					Data mag;
-					Data gyr;
-					float roll = 0.0, pitch = 0.0, yaw = 0.0;
-
-					// Werte ausrechnen:
-					cbAcc.get(acc);
-					cbMag.get(mag);
-					cbGyr.get(gyr);
-
-					calcRP_Acc(pitch, roll, acc.x, acc.y, acc.z);
-					//calcY_Mag(yaw, mag.z, mag.y, mag.z);
-					yaw = calcYaw(gyr.z);
+					char orient_str[41];
 
 					// Änderungen berechnen:
 					float dp = 0.0, dr = 0.0, dy = 0.0;
 
-					dp = cosf(roll) * cosf(pitch) * gyr.y
-							- sinf(roll) * cosf(pitch) * gyr.z;
-					dr = cosf(pitch) * gyr.x + sinf(roll) * sinf(pitch) * gyr.y
-							+ cosf(roll) * sinf(pitch) * gyr.z;
-					dy = sinf(roll) * gyr.y + cosf(roll) * gyr.z;
+					const float divconst = cosf(pitch);
+					// prüfen ob die Konstante gleich Null ist:
+					if (divconst != 0.0) {
 
-					// Änderungen addieren:
-					pitch += dp;
-					roll += dr;
-					yaw += dy;
+						dp = gyr_data.y * cosf(roll) - gyr_data.z * sinf(roll);
+						dr = gyr_data.x + gyr_data.y * sinf(roll) * tanf(pitch)
+								+ gyr_data.z * cosf(roll) * tanf(pitch);
+						dy = gyr_data.x * sinf(roll) / divconst
+								+ gyr_data.z * cosf(roll) / divconst;
+
+						// Änderungen addieren:
+						pitch += dp * this->interval / 1000;
+						roll += dr * this->interval / 1000;
+						yaw += dy * this->interval / 1000;
+					}
+
+					// Neue Winkel berechnen:
+					calcRollPitchByAccel(pitch, roll, acc_data.x, acc_data.y,
+							acc_data.z);
+					yaw = calcHeadingAngleByMagno(pitch, roll, mag_data.x,
+							mag_data.y, mag_data.z);
 
 					// Werte vom Bogenmaß in Grad umwandeln:
-					roll *= 180.0 / M_PI;
-					pitch *= 180.0 / M_PI;
-					yaw *= 180.0 / M_PI;
-
-					// ERSTMAL AUSPROBIEREN WAS RAUSKOMMT: VERMUTUNG: ICH MÜSSTE DIE WINKEL DER VORHERIGEN ITERATION NEHMEN & IRGENDWO DAZU SPEICHERN
+					roll = roll * rad2deg;
+					pitch = pitch * rad2deg;
+					yaw = yaw * rad2deg;
 
 					sprintf(orient_str, orient_msg, roll, pitch, yaw);
 
-					writeUART(BT2UART, orient_str);
-
+					write2UART(orient_str);
 				}
 					if (((int) this->pt) != 0)
 						break;
 				}
 
 				// Zeilenumbruch, um Datensätze voneinander trennen zu können
-				writeUART(BT2UART, "\n");
+				write2UART("\n");
 			}
 			// mit Interval suspenden:
 			suspendCallerUntil(NOW()+ this->interval * MILLISECONDS);
@@ -937,10 +941,15 @@ public:
 
 //*******************************************************************************
 
-struct telecommand: public Thread, public SubscriberReceiver<Telecommand> {
-	telecommand() :
+// Empfängt Telecommandos aus UART und führt sie aus
+struct telecommandThread: public Thread, public SubscriberReceiver<Telecommand> {
+	telecommandThread() :
 			SubscriberReceiver<Telecommand>(TopicTelecommand,
 					"TopicTelecommands") {
+	}
+
+	void init() {
+		led_red.init(1, 1, 0);
 	}
 
 	void put(Telecommand& data) {
@@ -949,7 +958,7 @@ struct telecommand: public Thread, public SubscriberReceiver<Telecommand> {
 		Command cmd;
 
 		// zugehörige LED toggeln:
-		ToggleLED(LED[2], 1000);
+		ToggleLED(led_red, 1000); // rot
 
 		switch (_data->id) {
 		case 'S':
@@ -1010,13 +1019,13 @@ struct telecommand: public Thread, public SubscriberReceiver<Telecommand> {
 		}
 
 		// mit zugehöriger LED toggeln:
-		ToggleLED(LED[2], 500);
+		ToggleLED(led_red, 500); // rot
 	}
 
 	void run(void) {
 		while (1) {
 			// mit zugehöriger LED toggeln:
-			ToggleLED(LED[2], 500);
+			//ToggleLED(LED[2], 500);
 			suspendCallerUntil(NOW()+ 500 * MILLISECONDS);
 		}
 	}
