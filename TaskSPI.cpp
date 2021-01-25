@@ -7,7 +7,9 @@
  * G		:	postet nur Gyroskop
  * M		:	postet nur Magnetometer
  * H		:	postet nur Temperatur
- *
+ * O		:	postet nur Orientierungswinkel
+ * F		: 	ändert den Wert des Filters alpha
+ * W		:	Orientierungswinkel zurücksetzen (alle) // noch nicht implementiert
  */
 
 /// Standardbibliotheken
@@ -94,7 +96,7 @@ HAL_GPIO led_blue(GPIO_063);
  */
 
 HAL_UART BT2UART(UART_IDX2); // UART (Tx=PD5, Rx=PD6)
-HAL_SPI IMU(SPI_IDX1); // SPI: müsste so sein wie auf Folie (Aufbau) abgebildet
+HAL_SPI IMU(SPI_IDX1); // SPI: SDA: PB5, SCL: PB3, Sensoren auf BP4
 
 // Sensoren:
 HAL_GPIO CS_AG(GPIO_006); // IMU Chip Pin für Gyro und Accelerometer
@@ -105,7 +107,8 @@ const float LSB_G = 70e-3f;
 const float LSB_A = 0.061e-3f;
 const float LSB_M = 0.14e-3f;
 
-const float rad2deg = 180.0f * 3.14159265f; // *M_PI;
+const float rad2deg = 180.0f / M_PI;
+const float deg2rad = M_PI / 180.0f;
 
 /// Intertask
 // UART -> Interpreter/StateMachine
@@ -127,21 +130,17 @@ static void ToggleLED(HAL_GPIO& led, uint32_t length_ms) {
 	led.setPins(0);
 }
 
-/*static void changeLED(HAL_GPIO& led, bool on = true) {
- led.setPins(on);
- }*/
-
 // Schreibt einen String in UART:
 static void write2UART(const char* string) {
 	const int len = strlen(string);
 
-	char *str = (char*) calloc(sizeof(char), len + 1);
+	//char *str = (char*) calloc(sizeof(char), len + 1);
 
-	sprintf(str, "\n%s", string); // TODO \r evtl. noch anfügen!
+	//sprintf(str, "\n%s", string); // TODO \r evtl. noch anfügen!
 
-	BT2UART.write(str, len);
-
-	free(str);
+	//BT2UART.write(str, len);
+	BT2UART.write(string, len);
+	//free(str);
 }
 
 //*******************************************************************************
@@ -250,7 +249,8 @@ static void calcRollPitchByAccel(float& pitch, float& roll, float a_x,
 		float a_y, float a_z) {
 
 	pitch = atan2f(-a_x, sqrt(a_y * a_y + a_z * a_z));
-	roll = atan2f(a_y, a_z);
+	//roll = atan2f(a_y, a_z); // alternativ: atan2f(a_y, sqrt(a_x * a_x + a_z * a_z))
+	roll = atan2f(a_y, sqrt(a_x * a_x + a_z * a_z));
 }
 
 static float calcHeadingAngleByMagno(float pitch, float roll, float M_x_s,
@@ -259,7 +259,20 @@ static float calcHeadingAngleByMagno(float pitch, float roll, float M_x_s,
 	const float M_y_h = M_x_s * sinf(roll) * sinf(pitch) + M_y_s * cosf(roll)
 			- M_z_s * sinf(roll) * cosf(pitch);
 
-	return atan2f(M_y_h, M_x_h);
+	float yaw = atan2f(M_y_h, M_x_h);
+	yaw = fmod(yaw, 2 * M_PI);
+
+	// Auf Interval [0; 2 * pi] mappen
+	if (yaw < 0)
+		yaw += 2 * M_PI;
+
+	return yaw;
+}
+
+static void calcRollPitchByGyro(float gx, float gy, float gz, float& roll,
+		float& pitch) {
+	static float _roll, _pitch;
+
 }
 
 //*******************************************************************************
@@ -280,6 +293,8 @@ class SignalProcessing: public Thread, public SubscriberReceiver<Command> {
 
 	float Value_Temp; // Speichert zuletzt gemessene Temperatur, ausnahmsweise in Float und nicht Ganzzahl speichern, da kein Offset und keine Kalibrierung nötig
 
+	Data data_accel, data_gyro, data_magno; // für Übertragung in Topic (sicherer wenn in größerem Scope!)
+
 	bool calibration_complete; // legt fest ob Kalibrierung der IMU erfolgt ist
 
 public:
@@ -289,6 +304,7 @@ public:
 		// Standart: 300 ms
 		calibration_complete = false;
 		Value_Temp = 0.0;
+
 	}
 
 	bool isCalibrated() {
@@ -332,10 +348,52 @@ public:
 	void put(Command& data) {
 		Command* _data = (Command*) &data;
 
+//		write2UART("Ich bin hier");
+
 		// Interval ändern:
 		switch (_data->id) {
 		case 'I':
 			this->interval = (uint) (_data->value);
+			break;
+		case 'C':
+			// Festlegen ob Kalibrierung erfolgt ist oder neu gemacht werden soll:
+			this->calibration_complete = (_data->value == 1.0 ? true : false);
+			break;
+		case 'n': /* Offset: Magnetometer: x_min */
+			this->Offset_M[0][0] = _data->value;
+			break;
+		case 'p': /* Offset: Magnetometer: y_min */
+			this->Offset_M[1][0] = _data->value;
+			break;
+		case 'q': /* Offset: Magnetometer: z_min */
+			this->Offset_M[2][0] = _data->value;
+			break;
+		case 'r': /* Offset: Magnetometer: x_max */
+			this->Offset_M[0][1] = _data->value;
+			break;
+		case 's': /* Offset: Magnetometer: y_max */
+			this->Offset_M[1][1] = _data->value;
+			break;
+		case 't': /* Offset: Magnetometer: z_max */
+			this->Offset_M[2][1] = _data->value;
+			break;
+		case 'u': /* Offset: Gyroskop: x */
+			this->Offset_G[0] = _data->value;
+			break;
+		case 'v': /* Offset: Gyroskop: y */
+			this->Offset_G[1] = _data->value;
+			break;
+		case 'w': /* Offset: Gyroskop: z */
+			this->Offset_G[2] = _data->value;
+			break;
+		case 'x': /* Offset: Accelerometer: x */
+			this->Offset_A[0] = _data->value;
+			break;
+		case 'y': /* Offset: Accelerometer: y */
+			this->Offset_A[1] = _data->value;
+			break;
+		case 'z': /* Offset: Accelerometer: z */
+			this->Offset_A[2] = _data->value;
 			break;
 		}
 	}
@@ -461,7 +519,7 @@ public:
 							int16_t temp_z = 0;
 							for (uint i = 0; i < N; i++) {
 								readSensor2Bytes(temp_z, CS_AG, OUT_Z_G);
-								data[2] += (float)(temp_z * LSB_G); // z-Achse
+								data[2] += ((float) (temp_z * LSB_G)); // z-Achse
 								AT(NOW() + 100 * MILLISECONDS); // Nach jeder Messung kurz warten, bis die nächste aufgenommen wird
 							}
 							// ######################################################
@@ -477,7 +535,7 @@ public:
 							int16_t temp_x = 0;
 							for (uint i = 0; i < N; i++) {
 								readSensor2Bytes(temp_x, CS_AG, OUT_X_G);
-								data[0] += (float)(temp_x * LSB_G); // x-Achse
+								data[0] += ((float) (temp_x * LSB_G)); // x-Achse
 								AT(NOW() + 100 * MILLISECONDS); // Nach jeder Messung kurz warten, bis die nächste aufgenommen wird
 							}
 							// ######################################################
@@ -493,7 +551,7 @@ public:
 							int16_t temp_y = 0;
 							for (uint i = 0; i < N; i++) {
 								readSensor2Bytes(temp_y, CS_AG, OUT_Y_G);
-								data[1] += (float)(temp_y * LSB_G); // y-Achse
+								data[1] += ((float) (temp_y * LSB_G)); // y-Achse
 								AT(NOW() + 100 * MILLISECONDS); // Nach jeder Messung kurz warten, bis die nächste aufgenommen wird
 							}
 							// ######################################################
@@ -502,9 +560,9 @@ public:
 							AT(NOW() + 1 * SECONDS);
 
 							// Werte ausrechnen:
-							Offset_G[0] = (float)(data[0] / N); // Offset x-Achse
-							Offset_G[1] = (float)(data[1] / N); // Offset y-Achse
-							Offset_G[2] = (float)(data[2] / N); // Offset z-Achse
+							Offset_G[0] = (float) (data[0] / N) * deg2rad; // Offset x-Achse
+							Offset_G[1] = (float) (data[1] / N) * deg2rad; // Offset y-Achse
+							Offset_G[2] = (float) (data[2] / N) * deg2rad; // Offset z-Achse
 
 							// Abschluss signalisieren:
 							ToggleLED(led_blue, 500);
@@ -548,7 +606,7 @@ public:
 
 								int16_t M_c_Z[2] = { 0, 0 }; // speichert über Kalibrierung den gemessenen Min- ([0]) und Maxwert ([1])
 
-								for (int i = 0; i < N; i++) {
+								for (unsigned int i = 0; i < N; i++) {
 									readSensor2Bytes(currVal, CS_M, OUT_Z_L_M);
 
 									// prüfen ob der Wert gespeichert werden soll:
@@ -561,8 +619,8 @@ public:
 								}
 
 								// In M_c befinden sich jetzt der Min/Max-Wert für Z-Achse, diesen speichern:
-								M_z_min = (float)(M_c_Z[0] * LSB_M);
-								M_z_max = (float)(M_c_Z[1] * LSB_M);
+								M_z_min = (float) (M_c_Z[0] * LSB_M);
+								M_z_max = (float) (M_c_Z[1] * LSB_M);
 							}
 							// ######################################################
 
@@ -580,7 +638,7 @@ public:
 
 								int16_t M_c_X[2] = { 0, 0 };
 
-								for (int i = 0; i < N; i++) {
+								for (unsigned int i = 0; i < N; i++) {
 									// Messung abrufen:
 									readSensor2Bytes(currVal, CS_M, OUT_X_L_M);
 
@@ -595,8 +653,8 @@ public:
 								}
 
 								// In M_c befinden sich jetzt der Min/Max-Wert für X-Achse, diesen speichern:
-								M_x_min = (float)(M_c_X[0] * LSB_M);
-								M_x_max = (float)(M_c_X[1] * LSB_M);
+								M_x_min = (float) (M_c_X[0] * LSB_M);
+								M_x_max = (float) (M_c_X[1] * LSB_M);
 							}
 							// ######################################################
 
@@ -614,7 +672,7 @@ public:
 
 								int16_t M_c_Y[2] = { 0, 0 };
 
-								for (int i = 0; i < N; i++) {
+								for (unsigned int i = 0; i < N; i++) {
 									// Messung abrufen:
 									readSensor2Bytes(currVal, CS_M, OUT_Y_L_M);
 
@@ -628,8 +686,8 @@ public:
 								}
 
 								// In M_c befinden sich jetzt der Min/Max-Wert für Y-Achse, diesen speichern:
-								M_y_min = (float)(M_c_Y[0] * LSB_M);
-								M_y_max = (float)(M_c_Y[1] * LSB_M);
+								M_y_min = (float) (M_c_Y[0] * LSB_M);
+								M_y_max = (float) (M_c_Y[1] * LSB_M);
 							}
 							// ######################################################
 
@@ -669,7 +727,12 @@ public:
 					} else {
 						// wird der Button nicht gedrückt, durch schnelles Aufblinken der LED die Bereitschaft signalisieren, weiter zu machen:
 						ToggleLED(led_blue, 200);
+						if (this->calibration_complete)
+							break;
 					}
+
+					//if (this->calibration_complete)
+					//	break;
 				}
 
 				write2UART("## Kalibrierung erfolgreich abgeschlossen! ##");
@@ -687,12 +750,12 @@ public:
 
 				readSensor6Bytes(temp, CS_AG, OUT_X_XL);
 
-				Data data;
-				data.x = temp[0] * LSB_A - this->Offset_A[0];
-				data.y = temp[1] * LSB_A - this->Offset_A[1];
-				data.z = temp[2] * LSB_A - this->Offset_A[2];
+				//Data data;
+				data_accel.x = temp[0] * LSB_A - this->Offset_A[0];
+				data_accel.y = temp[1] * LSB_A - this->Offset_A[1];
+				data_accel.z = temp[2] * LSB_A - this->Offset_A[2];
 
-				cbAcc.put(data);
+				cbAcc.put(data_accel);
 			}
 			// ******************
 
@@ -705,22 +768,22 @@ public:
 				readSensor2Bytes(temp[2], CS_AG, OUT_Z_G);
 				//readSensor6Bytes(temp, CS_AG, OUT_X_G);
 
-				Data data;
-				data.x = temp[0] * LSB_G - this->Offset_G[0];
-				data.y = temp[1] * LSB_G - this->Offset_G[1];
-				data.z = temp[2] * LSB_G - this->Offset_G[2];
+				//Data data;
+				data_gyro.x = temp[0] * LSB_G * deg2rad - this->Offset_G[0]; // Einheit: rad/s
+				data_gyro.y = temp[1] * LSB_G * deg2rad - this->Offset_G[1]; // Einheit: rad/s
+				data_gyro.z = temp[2] * LSB_G * deg2rad - this->Offset_G[2]; // Einheit: rad/s
 
-				cbGyr.put(data);
+				cbGyr.put(data_gyro);
 			}
 			// ******************
 
 			// Magnetometer:
 			{
 				int16_t temp[3] = { 0, 0, 0 };
-				//readSensor6Bytes(temp, CS_M, OUT_X_L_M);
-				readSensor2Bytes(temp[0], CS_M, OUT_X_L_M);
-				readSensor2Bytes(temp[1], CS_M, OUT_Y_L_M);
-				readSensor2Bytes(temp[2], CS_M, OUT_Z_L_M);
+				readSensor6Bytes(temp, CS_M, OUT_X_L_M);
+				//readSensor2Bytes(temp[0], CS_M, OUT_X_L_M);
+				//readSensor2Bytes(temp[1], CS_M, OUT_Y_L_M);
+				//readSensor2Bytes(temp[2], CS_M, OUT_Z_L_M);
 
 				// Referenzen für Übersichtlichkeit:
 				const float& M_x_min = this->Offset_M[0][0];
@@ -732,15 +795,15 @@ public:
 				const float& M_z_min = this->Offset_M[2][0];
 				const float& M_z_max = this->Offset_M[2][1];
 
-				Data data;
-				data.x = ((((float)(temp[0] * LSB_M) - M_x_min) / (M_x_max - M_x_min))
-						* 2) - 1;
-				data.y = ((((float)(temp[1] * LSB_M) - M_y_min) / (M_y_max - M_y_min))
-						* 2) - 1;
-				data.z = ((((float)(temp[2] * LSB_M) - M_z_min) / (M_z_max - M_z_min))
-						* 2) - 1;
+				//Data data;
+				data_magno.x = ((((float) (temp[0] * LSB_M) - M_x_min)
+						/ (M_x_max - M_x_min)) * 2) - 1;
+				data_magno.y = ((((float) (temp[1] * LSB_M) - M_y_min)
+						/ (M_y_max - M_y_min)) * 2) - 1;
+				data_magno.z = ((((float) (temp[2] * LSB_M) - M_z_min)
+						/ (M_z_max - M_z_min)) * 2) - 1;
 
-				cbMag.put(data);
+				cbMag.put(data_magno);
 			}
 			// ******************
 
@@ -770,7 +833,10 @@ class telemetryThread: public Thread, public SubscriberReceiver<Command> {
 	float val_acc[3];
 	float val_gyro[3];
 	float val_mag[3];
-	float roll, pitch, yaw; // Speichert Orientierungswinkel
+	float roll_am, pitch_am, yaw_am; // Orientierungswinkel (Accelerometer & Magnometer)
+	float roll_g, pitch_g; // Orientierungswinkel (Gyroskop)
+
+	float alpha; // Konstante für Filterprozess (via TC änderbar!)
 
 	enum tel {
 		all, acc, gyro, mag, temp, orient
@@ -782,9 +848,9 @@ public:
 					"TopicIntervalSignalProcessingReceiver"), interval(1500), pt(
 					(tel) 0) {
 		// Orientierungswinkel initialisieren und auf Null setzen:
-		roll = 0.0, pitch = 0.0, yaw = 0.0;
-
-		//val_temp = 0.0;
+		roll_am = 0.0, pitch_am = 0.0, yaw_am = 0.0, alpha =
+				1.0 /* Hat mit 1 keine Auswirkungen! */, roll_g = 0.0, pitch_g =
+				0.0;
 	}
 
 	void init() {
@@ -807,6 +873,8 @@ public:
 		case 'O':
 			this->pt = (tel) (_data->value);
 			break;
+		case 'F':
+			this->alpha = _data->value;
 		}
 	}
 
@@ -821,6 +889,78 @@ public:
 				cbMag.get(mag_data);
 				cbTemp.get(temperature);
 
+				// ############################# BERECHNUNGEN ###############################
+				// 1. Winkel: Accelerometer & Magnometer
+				// Änderungen berechnen:
+				float dp = 0.0, dr = 0.0, dy = 0.0;
+
+				const float divconst = cosf(pitch_g);
+				// prüfen ob die Konstante gleich Null ist:
+				if (divconst != 0.0) {
+
+					dp = gyr_data.y * cosf(roll_g)
+							- gyr_data.z * sinf(roll_g);
+					dr = gyr_data.x
+							+ gyr_data.y * sinf(roll_g) * tanf(pitch_g)
+							+ gyr_data.z * cosf(roll_g) * tanf(pitch_g);
+					dy = gyr_data.x * sinf(roll_g) / divconst
+							+ gyr_data.z * cosf(roll_g) / divconst;
+
+					// Änderungen addieren:
+					pitch_am += dp * (float) (this->interval / 1000.0f);
+					roll_am += dr * (float) (this->interval / 1000.0f);
+					yaw_am += dy * (float) (this->interval / 1000.0f);
+				}
+
+				// Neue Winkel berechnen:
+				calcRollPitchByAccel(pitch_am, roll_am, acc_data.x, acc_data.y,
+						acc_data.z); // roll und pitch noch in Interval mappen
+				yaw_am = calcHeadingAngleByMagno(pitch_am, roll_am, mag_data.x,
+						mag_data.y, mag_data.z); // yaw müsste hier schon gemappt sein
+
+				// Mappen der Winkel in richtiges Interval
+				//pitch_am = fmod(pitch_am, 2 * M_PI);
+				//roll_am = fmod(roll_am, 2 * M_PI);
+
+				//if (pitch_am < 0)
+				//	pitch_am += 2 * M_PI;
+				//if (roll_am < 0)
+				//	roll_am += 2 * M_PI;
+				if (pitch_am > M_PI)
+					pitch_am -= 2 * M_PI;
+				if (roll_am > 2 * M_PI)
+					roll_am -= 2 *M_PI;
+
+
+				// 2. Winkel berechnen: Aus Gyroskop
+				roll_g += gyr_data.x;// * (float) (this->interval / 1000);
+				pitch_g += gyr_data.y;// * (float) (this->interval / 1000);
+
+				// Winkel mappen:
+				//pitch_g = fmod(pitch_g, 2 * M_PI);
+				//roll_g = fmod(roll_g, 2 * M_PI);
+
+				//if (pitch_g < 0)
+				//	pitch_g += 2 * M_PI;
+				//if (roll_g < 0)
+				//	roll_g += 2 * M_PI;
+				if (pitch_g > M_PI)
+					pitch_g -= 2 * M_PI;
+				if (roll_g > 2* M_PI)
+					roll_g -= 2 * M_PI;
+
+
+				// Werte vom Bogenmaß in Grad umwandeln und gem. Filter aufaddieren
+				const float roll_res = (1 - alpha) * roll_am * rad2deg
+						+ alpha * roll_g * rad2deg;
+				const float pitch_res = (1 - alpha) * pitch_am * rad2deg
+						+ alpha * pitch_g * rad2deg;
+				const float yaw_res = (1 - alpha) * yaw_am * rad2deg; // Yaw wird nur von Accelerometer & Magnometer berechnet
+
+				// Gem. Filterplan: Gefilterte Winkel dem Gyroskop rückmelden: (Wichtig: Ins Bogenmaß konvertieren!)
+				roll_g = roll_res * deg2rad;
+				pitch_g = pitch_res * deg2rad;
+
 				// ########################### AUSGABE TELEMETRIE ###########################
 				// zugehörige LED toggeln:
 				ToggleLED(led_orange, 500);					// orange
@@ -829,10 +969,10 @@ public:
 				case 0: // bei all einfach alle Fälle durchlaufen
 				case 1: {
 					// nur Acc
-					const char* acc_msg =
-							"Acc: x=%2.4f g, y=%2.4f g, z=%2.4f g\0";
+					const char* acc_msg = "$a%2.4f,%2.4f,%2.4f#";
+					//"Acc: x=%2.4f g, y=%2.4f g, z=%2.4f g\0";
 
-					char acc_str[43]; // 40
+					char acc_str[26]; // 43
 
 					sprintf(acc_str, acc_msg, acc_data.x, acc_data.y,
 							acc_data.z);
@@ -843,10 +983,10 @@ public:
 						break;
 				case 2: {
 					// nur Gyro
-					const char* gyro_msg =
-							"Gyro: x=%5.5f dps, y=%5.5f dps, z=%5.5f dps\0";
+					const char* gyro_msg = "$g%3.4f,%3.4f,%3.4f#";
+					//"Gyro: x=%5.5f dps, y=%5.5f dps, z=%5.5f dps\0";
 
-					char gyro_str[62];
+					char gyro_str[29]; // 62
 
 					sprintf(gyro_str, gyro_msg, gyr_data.x * rad2deg,
 							gyr_data.y * rad2deg, gyr_data.z * rad2deg);
@@ -858,10 +998,10 @@ public:
 
 				case 3: {
 					// nur Mag
-					const char* mag_msg =
-							"Mag: x=%4.5f gauss, y=%4.5f gauss, z=%4.5f gauss\0";
+					const char* mag_msg = "$m%2.4f,%2.4f,%2.4f#";
+					//"Mag: x=%4.5f gauss, y=%4.5f gauss, z=%4.5f gauss\0";
 
-					char mag_str[64];
+					char mag_str[26]; // 64
 
 					sprintf(mag_str, mag_msg, mag_data.x, mag_data.y,
 							mag_data.z);
@@ -873,9 +1013,10 @@ public:
 
 				case 4: {
 					// nur Temp
-					const char* temp_msg = "Temp: x=%2.2f C\0";
+					const char* temp_msg = "$h%3.3f#\0";
+					//"Temp: x=%2.2f C\0";
 
-					char temp_str[16];
+					char temp_str[11]; //16
 
 					sprintf(temp_str, temp_msg, temperature);
 
@@ -886,42 +1027,13 @@ public:
 
 				case 5: {
 					// nur Orientierung:
-					const char* orient_msg =
-							"roll=%4.2f, pitch=%4.2f, yaw=%4.2f\0";
+					const char* orient_msg = "$o%4.2f,%4.2f,%4.2f#";
+					//"roll=%4.2f, pitch=%4.2f, yaw=%4.2f\0";
 
-					char orient_str[41];
+					char orient_str[26]; //41
 
-					// Änderungen berechnen:
-					float dp = 0.0, dr = 0.0, dy = 0.0;
-
-					const float divconst = cosf(pitch);
-					// prüfen ob die Konstante gleich Null ist:
-					if (divconst != 0.0) {
-
-						dp = gyr_data.y * cosf(roll) - gyr_data.z * sinf(roll);
-						dr = gyr_data.x + gyr_data.y * sinf(roll) * tanf(pitch)
-								+ gyr_data.z * cosf(roll) * tanf(pitch);
-						dy = gyr_data.x * sinf(roll) / divconst
-								+ gyr_data.z * cosf(roll) / divconst;
-
-						// Änderungen addieren:
-						pitch += dp * this->interval / 1000;
-						roll += dr * this->interval / 1000;
-						yaw += dy * this->interval / 1000;
-					}
-
-					// Neue Winkel berechnen:
-					calcRollPitchByAccel(pitch, roll, acc_data.x, acc_data.y,
-							acc_data.z);
-					yaw = calcHeadingAngleByMagno(pitch, roll, mag_data.x,
-							mag_data.y, mag_data.z);
-
-					// Werte vom Bogenmaß in Grad umwandeln:
-					roll = roll * rad2deg;
-					pitch = pitch * rad2deg;
-					yaw = yaw * rad2deg;
-
-					sprintf(orient_str, orient_msg, roll, pitch, yaw);
+					sprintf(orient_str, orient_msg, roll_res, pitch_res,
+							yaw_res);
 
 					write2UART(orient_str);
 				}
@@ -943,6 +1055,8 @@ public:
 
 // Empfängt Telecommandos aus UART und führt sie aus
 struct telecommandThread: public Thread, public SubscriberReceiver<Telecommand> {
+	Command cmd; // zur Übertragung in o.g. Topic
+
 	telecommandThread() :
 			SubscriberReceiver<Telecommand>(TopicTelecommand,
 					"TopicTelecommands") {
@@ -955,66 +1069,171 @@ struct telecommandThread: public Thread, public SubscriberReceiver<Telecommand> 
 	void put(Telecommand& data) {
 		Telecommand* _data = (Telecommand*) &data;
 
-		Command cmd;
-
 		// zugehörige LED toggeln:
 		ToggleLED(led_red, 1000); // rot
 
 		switch (_data->id) {
-		case 'S':
+		case 'S': {
 			// Interval von SignalProcess ändern: (via Topic)
 			cmd.id = 'I';
 			cmd.value = _data->data;
 
 			TopicTelemetry.publish(cmd);
+		}
 			break;
-		case 'T':
+		case 'T': {
 			cmd.id = 'T';
 			cmd.value = _data->data;
 
 			TopicTelemetry.publish(cmd);
+		}
 			break;
-		case 'Q':
+		case 'Q': {
 			// alle:
 			cmd.id = 'Q';
 			cmd.value = 0;
 
 			TopicTelemetry.publish(cmd);
+		}
 			break;
-		case 'A':
+		case 'A': {
 			// nur Acc:
 			cmd.id = 'A';
 			cmd.value = 1;
 
 			TopicTelemetry.publish(cmd);
+		}
 			break;
-		case 'G':
+		case 'G': {
 			// nur Gyro:
 			cmd.id = 'G';
 			cmd.value = 2;
 
 			TopicTelemetry.publish(cmd);
+		}
 			break;
-		case 'M':
+		case 'M': {
 			// nur Mag:
 			cmd.id = 'M';
 			cmd.value = 3;
 
 			TopicTelemetry.publish(cmd);
+		}
 			break;
-		case 'H':
+		case 'H': {
 			// nur Temperatur:
 			cmd.id = 'H';
 			cmd.value = 4;
 
 			TopicTelemetry.publish(cmd);
+		}
 			break;
-		case 'O':
+		case 'O': {
 			// nur Orientierung:
 			cmd.id = 'O';
 			cmd.value = 5;
 
 			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 'C': {
+			// neu Kalibrieren:
+			cmd.id = 'C';
+			cmd.value = (data.data == 1.0 ? true : false);
+
+			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 'n': {
+			cmd.id = 'n';
+			cmd.value = data.data;
+
+			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 'p': {
+			cmd.id = 'p';
+			cmd.value = data.data;
+
+			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 'q': {
+			cmd.id = 'q';
+			cmd.value = data.data;
+
+			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 'r': {
+			cmd.id = 'r';
+			cmd.value = data.data;
+
+			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 's': {
+			cmd.id = 's';
+			cmd.value = data.data;
+
+			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 't': {
+			cmd.id = 't';
+			cmd.value = data.data;
+
+			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 'u': {
+			cmd.id = 'u';
+			cmd.value = data.data;
+
+			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 'v': {
+			cmd.id = 'v';
+			cmd.value = data.data;
+
+			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 'w': {
+			cmd.id = 'w';
+			cmd.value = data.data;
+
+			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 'x': { // x-Wert Accelerometer (Offset)
+			cmd.id = 'x';
+			cmd.value = data.data;
+
+			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 'y': { // y-Wert Accelerometer (Offset)
+			cmd.id = 'y';
+			cmd.value = data.data;
+
+			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 'z': { // z-Wert Accelerometer (Offset)
+			cmd.id = 'z';
+			cmd.value = data.data;
+
+			TopicTelemetry.publish(cmd);
+		}
+			break;
+		case 'F': { // Änderung Filterkonstante
+			cmd.id = 'F';
+			cmd.value = data.data;
+
+			TopicTelemetry.publish(cmd);
+		}
 			break;
 		}
 
